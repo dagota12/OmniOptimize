@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { 
   Sparkles, 
   Github, 
@@ -13,42 +13,36 @@ import {
   Eye,
   EyeOff,
   Lock,
-  User
+  User,
+  Mail
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function AuthPage() {
-  const [mode, setMode] = useState("login"); // 'login' | 'signup'
+  const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
-  // Toggle function with a slight delay for visual effect if needed
-  const toggleMode = () => {
-    setMode(mode === "login" ? "signup" : "login");
-  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate API call
     setTimeout(() => {
       setIsLoading(false);
-      // Logic to redirect would go here
     }, 2000);
   };
 
   return (
     <div className="w-full min-h-screen grid lg:grid-cols-2 overflow-hidden bg-white dark:bg-slate-950">
       
-      {/* --- LEFT SIDE: FORM --- */}
-      <div className="relative flex flex-col justify-center px-4 sm:px-6 lg:px-20 xl:px-24 border-r border-slate-200 dark:border-slate-800">
+      {/* --- LEFT SIDE: FORM CONTAINER --- */}
+      <div className="relative flex flex-col justify-center items-center px-4 sm:px-6 lg:px-20 xl:px-24 border-r border-slate-200 dark:border-slate-800 perspective-1000">
         
         {/* Subtle Grid Background */}
         <div className="absolute inset-0 bg-grid-light dark:bg-grid-dark opacity-[0.4] pointer-events-none" />
 
-        {/* Logo (Top Left) */}
+        {/* Logo (Static) */}
         <div className="absolute top-8 left-8 flex items-center gap-2 z-20">
             <Link href="/" className="flex items-center gap-2 group">
                 <div className="h-8 w-8 bg-brand-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-brand-500/20 transition-transform group-hover:rotate-12">
@@ -60,151 +54,132 @@ export default function AuthPage() {
             </Link>
         </div>
 
-        <div className="w-full max-w-sm mx-auto relative z-10">
-            
-            {/* Header Text Morphing */}
-            <div className="mb-8 min-h-[80px]">
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={mode}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.2 }}
-                    >
-                        <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">
-                            {mode === "login" ? "Welcome back" : "Create an account"}
+        {/* --- THE FLIPPING CARD --- */}
+        <div 
+            className="w-full max-w-sm relative z-10"
+            style={{ perspective: "1000px" }}
+        >
+            <motion.div
+                initial={false}
+                animate={{ rotateY: isLogin ? 0 : 180 }}
+                transition={{ duration: 0.6, ease: "easeInOut" }}
+                className="relative w-full transform-style-3d"
+                style={{ transformStyle: "preserve-3d" }}
+            >
+                
+                {/* === FRONT FACE (LOGIN) === */}
+                <div 
+                    className="w-full backface-hidden bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl"
+                    style={{ backfaceVisibility: "hidden" }}
+                >
+                    <div className="mb-8 text-center">
+                        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">
+                            Welcome back
                         </h1>
                         <p className="text-slate-600 dark:text-slate-400 text-sm">
-                            {mode === "login" 
-                                ? "Enter your credentials to access your dashboard." 
-                                : "Start optimizing your web performance today."}
+                            Enter your credentials to access your dashboard.
                         </p>
-                    </motion.div>
-                </AnimatePresence>
-            </div>
+                    </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-                
-                {/* Name Input (Slides in for Sign Up) */}
-                <AnimatePresence initial={false}>
-                    {mode === "signup" && (
-                        <motion.div
-                            initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                            animate={{ opacity: 1, height: "auto", marginBottom: 20 }}
-                            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                            className="overflow-hidden"
-                        >
-                            <div className="space-y-2">
-                                <Label htmlFor="name" className="text-slate-700 dark:text-slate-300 font-medium">Full Name</Label>
-                                <div className="relative">
-                                    <Input 
-                                        id="name" 
-                                        type="text" 
-                                        placeholder="John Doe" 
-                                        className="h-11 pl-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus-visible:ring-brand-500 transition-all"
-                                        required 
-                                    />
-                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                </div>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div className="space-y-2">
+                            <Label className="text-slate-700 dark:text-slate-300 text-xs uppercase font-bold tracking-wider">Email</Label>
+                            <div className="relative">
+                                <Input type="email" placeholder="name@company.com" className="pl-10 h-11 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" required />
+                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                        </div>
 
-                {/* Email Input */}
-                <div className="space-y-2">
-                    <Label htmlFor="email" className="text-slate-700 dark:text-slate-300 font-medium">Email</Label>
-                    <Input 
-                        id="email" 
-                        type="email" 
-                        placeholder="name@company.com" 
-                        className="h-11 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus-visible:ring-brand-500 transition-all"
-                        required 
-                    />
-                </div>
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <Label className="text-slate-700 dark:text-slate-300 text-xs uppercase font-bold tracking-wider">Password</Label>
+                                <Link href="#" className="text-xs font-medium text-brand-600 hover:text-brand-500">Forgot?</Link>
+                            </div>
+                            <div className="relative">
+                                <Input type={showPassword ? "text" : "password"} placeholder="••••••••" className="pl-10 h-11 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" required />
+                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                            </div>
+                        </div>
 
-                {/* Password Input */}
-                <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                        <Label htmlFor="password" className="text-slate-700 dark:text-slate-300 font-medium">Password</Label>
-                        {mode === "login" && (
-                            <Link href="#" className="text-xs font-medium text-brand-600 hover:text-brand-500">
-                                Forgot password?
-                            </Link>
-                        )}
+                        <Button type="submit" className="w-full h-11 bg-brand-600 hover:bg-brand-700 text-white font-medium shadow-lg shadow-brand-500/20" disabled={isLoading}>
+                            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sign In"}
+                        </Button>
+                    </form>
+
+                    <div className="relative my-6">
+                        <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-200 dark:border-slate-800" /></div>
+                        <div className="relative flex justify-center text-xs uppercase"><span className="bg-white dark:bg-slate-950 px-2 text-slate-500">Or</span></div>
                     </div>
-                    <div className="relative">
-                        <Input 
-                            id="password" 
-                            type={showPassword ? "text" : "password"} 
-                            placeholder="••••••••" 
-                            className="h-11 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus-visible:ring-brand-500 pr-10 transition-all"
-                            required 
-                        />
-                        <button 
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-                        >
-                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <Button variant="outline" className="h-10 text-xs"><Github className="mr-2 h-3 w-3" /> GitHub</Button>
+                        <Button variant="outline" className="h-10 text-xs"><Chrome className="mr-2 h-3 w-3 text-red-500" /> Google</Button>
+                    </div>
+
+                    <p className="mt-6 text-center text-xs text-slate-500">
+                        Don't have an account?{" "}
+                        <button onClick={() => setIsLogin(false)} className="font-bold text-brand-600 hover:underline">
+                            Sign up
                         </button>
+                    </p>
+                </div>
+
+                {/* === BACK FACE (SIGN UP) === */}
+                <div 
+                    className="absolute inset-0 w-full h-full backface-hidden bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl"
+                    style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+                >
+                    <div className="mb-6 text-center">
+                        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">
+                            Create Account
+                        </h1>
+                        <p className="text-slate-600 dark:text-slate-400 text-sm">
+                            Start optimizing your web performance.
+                        </p>
                     </div>
+
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div className="space-y-2">
+                            <Label className="text-slate-700 dark:text-slate-300 text-xs uppercase font-bold tracking-wider">Full Name</Label>
+                            <div className="relative">
+                                <Input type="text" placeholder="John Doe" className="pl-10 h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" required />
+                                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label className="text-slate-700 dark:text-slate-300 text-xs uppercase font-bold tracking-wider">Email</Label>
+                            <div className="relative">
+                                <Input type="email" placeholder="name@company.com" className="pl-10 h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" required />
+                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label className="text-slate-700 dark:text-slate-300 text-xs uppercase font-bold tracking-wider">Password</Label>
+                            <div className="relative">
+                                <Input type="password" placeholder="Create a password" className="pl-10 h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" required />
+                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            </div>
+                        </div>
+
+                        <Button type="submit" className="w-full h-10 bg-brand-600 hover:bg-brand-700 text-white font-medium shadow-lg mt-2">
+                            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Account"}
+                        </Button>
+                    </form>
+
+                    <p className="mt-6 text-center text-xs text-slate-500">
+                        Already have an account?{" "}
+                        <button onClick={() => setIsLogin(true)} className="font-bold text-brand-600 hover:underline">
+                            Log in
+                        </button>
+                    </p>
                 </div>
 
-                {/* Submit Button (Morphs Text) */}
-                <Button 
-                    type="submit" 
-                    className="w-full h-11 bg-brand-600 hover:bg-brand-700 text-white font-medium shadow-lg shadow-brand-500/20 transition-all"
-                    disabled={isLoading}
-                >
-                    {isLoading ? (
-                        <span className="flex items-center gap-2">
-                            <Loader2 className="w-4 h-4 animate-spin" /> 
-                            {mode === "login" ? "Verifying..." : "Creating Account..."}
-                        </span>
-                    ) : (
-                        <span className="flex items-center gap-2">
-                            {mode === "login" ? "Sign in to Dashboard" : "Create Free Account"} 
-                            <ArrowRight className="w-4 h-4" />
-                        </span>
-                    )}
-                </Button>
-            </form>
-
-            {/* Divider */}
-            <div className="relative my-8">
-                <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-slate-200 dark:border-slate-800" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-white dark:bg-slate-950 px-2 text-slate-500">
-                        Or continue with
-                    </span>
-                </div>
-            </div>
-
-            {/* Social Buttons */}
-            <div className="grid grid-cols-2 gap-4">
-                <Button variant="outline" className="h-11 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 dark:text-white">
-                    <Github className="mr-2 h-4 w-4" /> GitHub
-                </Button>
-                <Button variant="outline" className="h-11 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 dark:text-white">
-                    <Chrome className="mr-2 h-4 w-4 text-red-500" /> Google
-                </Button>
-            </div>
-
-            {/* Toggle Mode Link */}
-            <p className="mt-8 text-center text-sm text-slate-600 dark:text-slate-400">
-                {mode === "login" ? "Don't have an account?" : "Already have an account?"}{" "}
-                <button 
-                    onClick={toggleMode}
-                    className="font-semibold text-brand-600 hover:text-brand-500 hover:underline underline-offset-4 focus:outline-none"
-                >
-                    {mode === "login" ? "Sign up for free" : "Log in"}
-                </button>
-            </p>
-
+            </motion.div>
         </div>
 
         {/* Footer Links (Left Side) */}
