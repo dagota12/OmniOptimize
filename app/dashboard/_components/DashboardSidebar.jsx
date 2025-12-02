@@ -1,16 +1,21 @@
 "use client";
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { useUser, useClerk } from "@clerk/nextjs"; // <--- Imports
 import { navigation } from "@/data/mockDashboard";
-import { ChevronDown, Sparkles, LogOut } from "lucide-react";
+import { ChevronDown, Sparkles, LogOut, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const DashboardSidebar = () => {
   const pathname = usePathname();
+  const router = useRouter();
   const [openGroups, setOpenGroups] = useState({});
+  const { isLoaded, user } = useUser(); // <--- Get User
+  const { signOut } = useClerk();       // <--- Get SignOut
 
   const toggleGroup = (name) => {
     setOpenGroups(prev => ({ ...prev, [name]: !prev[name] }));
@@ -21,14 +26,14 @@ const DashboardSidebar = () => {
       
       {/* 1. Logo Area */}
       <div className="h-16 flex items-center px-6 border-b border-slate-100 dark:border-slate-900">
-        <div className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2">
             <div className="h-8 w-8 bg-brand-600 rounded-lg flex items-center justify-center text-white">
                 <Sparkles size={16} fill="currentColor" />
             </div>
             <span className="font-bold text-lg text-slate-900 dark:text-white tracking-tight">
                 OmniOptimize
             </span>
-        </div>
+        </Link>
       </div>
 
       {/* 2. Navigation Items */}
@@ -41,7 +46,6 @@ const DashboardSidebar = () => {
             return (
                 <div key={item.name}>
                     {hasChildren ? (
-                        // Collapsible Group Header
                         <button
                             onClick={() => toggleGroup(item.name)}
                             className={cn(
@@ -58,7 +62,6 @@ const DashboardSidebar = () => {
                             <ChevronDown className={cn("w-4 h-4 transition-transform", isOpen && "rotate-180")} />
                         </button>
                     ) : (
-                        // Standard Link
                         <Link
                             href={item.href}
                             className={cn(
@@ -73,7 +76,6 @@ const DashboardSidebar = () => {
                         </Link>
                     )}
 
-                    {/* Nested Children */}
                     <AnimatePresence>
                         {hasChildren && isOpen && (
                             <motion.div
@@ -106,20 +108,38 @@ const DashboardSidebar = () => {
         })}
       </div>
 
-      {/* 3. User Footer */}
+      {/* 3. User Footer (Dynamic) */}
       <div className="p-4 border-t border-slate-100 dark:border-slate-900">
-        <div className="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold">
-                JD
+        {!isLoaded ? (
+            <div className="flex justify-center p-2"><Loader2 className="animate-spin text-slate-400"/></div>
+        ) : user ? (
+            <div className="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <Avatar className="h-8 w-8">
+                    <AvatarImage src={user.imageUrl} />
+                    <AvatarFallback className="bg-brand-500 text-white text-xs">
+                        {user.firstName?.charAt(0)}
+                    </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                        {user.fullName}
+                    </p>
+                    <p className="text-xs text-slate-500 truncate">
+                        {user.primaryEmailAddress?.emailAddress}
+                    </p>
+                </div>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-slate-400 hover:text-red-500"
+                    onClick={() => signOut(() => router.push("/"))}
+                >
+                    <LogOut className="w-4 h-4" />
+                </Button>
             </div>
-            <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-900 dark:text-white truncate">Miheretab sam</p>
-                <p className="text-xs text-slate-500 truncate">Pro Plan</p>
-            </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-500">
-                <LogOut className="w-4 h-4" />
-            </Button>
-        </div>
+        ) : (
+            <div className="text-center text-xs text-slate-500">Guest</div>
+        )}
       </div>
 
     </div>

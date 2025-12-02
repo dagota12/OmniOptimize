@@ -1,20 +1,24 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { 
-  Sparkles, 
-  Github, 
-  Chrome, 
-  ArrowRight, 
-  CheckCircle2, 
+import { useAuth, useSignIn, useSignUp } from "@clerk/nextjs"; // <--- Import Clerk Hooks
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import {
+  Sparkles,
+  Github,
+  Chrome,
   Loader2,
   Eye,
   EyeOff,
   Lock,
   User,
-  Mail
+  Mail,
+  AlertCircle,
+  CheckCircle2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,25 +28,105 @@ export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const { isSignedIn } = useAuth();
+
+  const { isLoaded: isSignInLoaded, signIn, setActive: setSignInActive } = useSignIn();
+  const { isLoaded: isSignUpLoaded, signUp, setActive: setSignUpActive } = useSignUp();
+  
+  const storeUser = useMutation(api.users.store); // <--- Convex Sync Mutation
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isSignedIn) {
+      router.push("/dashboard");
+    }
+  }, [isSignedIn, router]);
+  // --- HANDLE LOGIN ---
+  const handleLogin = async (e) => {
     e.preventDefault();
+    if (!isSignInLoaded) return;
     setIsLoading(true);
-    setTimeout(() => {
+    setError("");
+
+    const email = e.target.email.value;
+    const password = e.target.password.value;
+
+    try {
+      const result = await signIn.create({ identifier: email, password });
+
+      if (result.status === "complete") {
+        await setSignInActive({ session: result.createdSessionId });
+        // Sync user to Convex immediately
+        await storeUser(); 
+        router.push("/dashboard");
+      } else {
+        console.log(result);
+        setError("Login requires additional steps (MFA not supported in this demo).");
+      }
+    } catch (err) {
+      setError(err.errors?.[0]?.message || "Something went wrong.");
+    } finally {
       setIsLoading(false);
-    }, 2000);
+    }
+  };
+
+  // --- HANDLE SIGN UP ---
+  const handleSignUp = async (e) => {
+    e.preventDefault();
+    if (!isSignUpLoaded) return;
+    setIsLoading(true);
+    setError("");
+
+    const email = e.target.email.value;
+    const password = e.target.password.value;
+    // Note: Clerk often requires a Code Verification step for email signups.
+    // For simplicity here, we assume email verification is optional in your dev environment,
+    // OR you must implement the Code Verification UI flow next.
+    
+    try {
+      const result = await signUp.create({ emailAddress: email, password });
+      
+      // Check if verification is needed
+      if (result.status === "missing_requirements") {
+         // In a real app, you'd flip to a "Verify Code" screen here.
+         await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+         alert("We sent a code to your email. (Verification UI logic needed here)");
+         // For demo purposes, we stop here.
+      } else if (result.status === "complete") {
+        await setSignUpActive({ session: result.createdSessionId });
+        await storeUser();
+        router.push("/dashboard");
+      }
+    } catch (err) {
+      setError(err.errors?.[0]?.message || "Sign up failed.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // --- OAUTH HANDLER (Google/GitHub) ---
+  const handleOAuth = (strategy) => {
+    if(!isSignInLoaded) return;
+    // Redirects to Google/GitHub
+    signIn.authenticateWithRedirect({
+      strategy,
+      redirectUrl: "/sso-callback",
+      redirectUrlComplete: "/dashboard",
+    });
   };
 
   return (
     <div className="w-full min-h-screen grid lg:grid-cols-2 overflow-hidden bg-white dark:bg-slate-950">
-      
+
       {/* --- LEFT SIDE: FORM CONTAINER --- */}
       <div className="relative flex flex-col justify-center items-center px-4 sm:px-6 lg:px-20 xl:px-24 border-r border-slate-200 dark:border-slate-800 perspective-1000">
         
         {/* Subtle Grid Background */}
         <div className="absolute inset-0 bg-grid-light dark:bg-grid-dark opacity-[0.4] pointer-events-none" />
 
-        {/* Logo (Static) */}
+        {/* Logo */}
         <div className="absolute top-8 left-8 flex items-center gap-2 z-20">
             <Link href="/" className="flex items-center gap-2 group">
                 <div className="h-8 w-8 bg-brand-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-brand-500/20 transition-transform group-hover:rotate-12">
@@ -55,10 +139,7 @@ export default function AuthPage() {
         </div>
 
         {/* --- THE FLIPPING CARD --- */}
-        <div 
-            className="w-full max-w-sm relative z-10"
-            style={{ perspective: "1000px" }}
-        >
+        <div className="w-full max-w-sm relative z-10" style={{ perspective: "1000px" }}>
             <motion.div
                 initial={false}
                 animate={{ rotateY: isLogin ? 0 : 180 }}
@@ -73,30 +154,32 @@ export default function AuthPage() {
                     style={{ backfaceVisibility: "hidden" }}
                 >
                     <div className="mb-8 text-center">
-                        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">
-                            Welcome back
-                        </h1>
-                        <p className="text-slate-600 dark:text-slate-400 text-sm">
-                            Enter your credentials to access your dashboard.
-                        </p>
+                        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">Welcome back</h1>
+                        <p className="text-slate-600 dark:text-slate-400 text-sm">Enter your credentials to access your dashboard.</p>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    {error && (
+                        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded flex items-center gap-2 text-xs text-red-600 dark:text-red-400">
+                            <AlertCircle className="w-4 h-4" /> {error}
+                        </div>
+                    )}
+
+                    <form onSubmit={handleLogin} className="space-y-4">
                         <div className="space-y-2">
-                            <Label className="text-slate-700 dark:text-slate-300 text-xs uppercase font-bold tracking-wider">Email</Label>
+                            <Label htmlFor="email" className="text-slate-700 dark:text-slate-300 text-xs uppercase font-bold tracking-wider">Email</Label>
                             <div className="relative">
-                                <Input type="email" placeholder="name@company.com" className="pl-10 h-11 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" required />
+                                <Input id="email" name="email" type="email" placeholder="name@company.com" className="pl-10 h-11 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" required />
                                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             </div>
                         </div>
 
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                                <Label className="text-slate-700 dark:text-slate-300 text-xs uppercase font-bold tracking-wider">Password</Label>
+                                <Label htmlFor="password" className="text-slate-700 dark:text-slate-300 text-xs uppercase font-bold tracking-wider">Password</Label>
                                 <Link href="#" className="text-xs font-medium text-brand-600 hover:text-brand-500">Forgot?</Link>
                             </div>
                             <div className="relative">
-                                <Input type={showPassword ? "text" : "password"} placeholder="••••••••" className="pl-10 h-11 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" required />
+                                <Input id="password" name="password" type={showPassword ? "text" : "password"} placeholder="••••••••" className="pl-10 h-11 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" required />
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -115,13 +198,17 @@ export default function AuthPage() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                        <Button variant="outline" className="h-10 text-xs"><Github className="mr-2 h-3 w-3" /> GitHub</Button>
-                        <Button variant="outline" className="h-10 text-xs"><Chrome className="mr-2 h-3 w-3 text-red-500" /> Google</Button>
+                        <Button variant="outline" className="h-10 text-xs" onClick={() => handleOAuth("oauth_github")}>
+                            <Github className="mr-2 h-3 w-3" /> GitHub
+                        </Button>
+                        <Button variant="outline" className="h-10 text-xs" onClick={() => handleOAuth("oauth_google")}>
+                            <Chrome className="mr-2 h-3 w-3 text-red-500" /> Google
+                        </Button>
                     </div>
 
                     <p className="mt-6 text-center text-xs text-slate-500">
                         Don't have an account?{" "}
-                        <button onClick={() => setIsLogin(false)} className="font-bold text-brand-600 hover:underline">
+                        <button onClick={() => { setIsLogin(false); setError(""); }} className="font-bold text-brand-600 hover:underline">
                             Sign up
                         </button>
                     </p>
@@ -133,27 +220,22 @@ export default function AuthPage() {
                     style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
                 >
                     <div className="mb-6 text-center">
-                        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">
-                            Create Account
-                        </h1>
-                        <p className="text-slate-600 dark:text-slate-400 text-sm">
-                            Start optimizing your web performance.
-                        </p>
+                        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">Create Account</h1>
+                        <p className="text-slate-600 dark:text-slate-400 text-sm">Start optimizing your web performance.</p>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="space-y-2">
-                            <Label className="text-slate-700 dark:text-slate-300 text-xs uppercase font-bold tracking-wider">Full Name</Label>
-                            <div className="relative">
-                                <Input type="text" placeholder="John Doe" className="pl-10 h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" required />
-                                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                            </div>
+                     {error && (
+                        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded flex items-center gap-2 text-xs text-red-600 dark:text-red-400">
+                            <AlertCircle className="w-4 h-4" /> {error}
                         </div>
+                    )}
 
+                    <form onSubmit={handleSignUp} className="space-y-4">
+                        {/* Name field is optional in simple Clerk email flow, removing to simplify for now */}
                         <div className="space-y-2">
                             <Label className="text-slate-700 dark:text-slate-300 text-xs uppercase font-bold tracking-wider">Email</Label>
                             <div className="relative">
-                                <Input type="email" placeholder="name@company.com" className="pl-10 h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" required />
+                                <Input name="email" type="email" placeholder="name@company.com" className="pl-10 h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" required />
                                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             </div>
                         </div>
@@ -161,19 +243,19 @@ export default function AuthPage() {
                         <div className="space-y-2">
                             <Label className="text-slate-700 dark:text-slate-300 text-xs uppercase font-bold tracking-wider">Password</Label>
                             <div className="relative">
-                                <Input type="password" placeholder="Create a password" className="pl-10 h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" required />
+                                <Input name="password" type="password" placeholder="Create a password" className="pl-10 h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" required />
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             </div>
                         </div>
 
-                        <Button type="submit" className="w-full h-10 bg-brand-600 hover:bg-brand-700 text-white font-medium shadow-lg mt-2">
+                        <Button type="submit" className="w-full h-10 bg-brand-600 hover:bg-brand-700 text-white font-medium shadow-lg mt-2" disabled={isLoading}>
                             {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Account"}
                         </Button>
                     </form>
 
                     <p className="mt-6 text-center text-xs text-slate-500">
                         Already have an account?{" "}
-                        <button onClick={() => setIsLogin(true)} className="font-bold text-brand-600 hover:underline">
+                        <button onClick={() => { setIsLogin(true); setError(""); }} className="font-bold text-brand-600 hover:underline">
                             Log in
                         </button>
                     </p>

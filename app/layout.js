@@ -3,9 +3,8 @@ import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import { ThemeProvider } from "next-themes"; 
-import ProgressBar from "@/components/ProgressBar"; 
-import Navbar from "./(HOME)/_components/Navbar";
-import Footer from "./(HOME)/_components/Footer";
+import ProgressBar from "@/components/ProgressBar";
+import ConvexClientProvider from "./ConvexClientProvider";
 
 // CORRECTION: Import Navbar and Footer from the global '_components' folder
 // Based on your file tree: app/_components/Navbar.jsx and app/_components/Footer.jsx
@@ -37,7 +36,9 @@ export default function RootLayout({ children }) {
 					
                     {/* 2. Children renders the page content (Home, About, etc.) */}
 					<div className="min-h-screen flex flex-col">
-                        {children}
+                        <ConvexClientProvider>
+							{children}
+						</ConvexClientProvider>
                     </div>
                     
                     

@@ -1,16 +1,16 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Menu, Sparkles, ChevronRight, LayoutDashboard } from "lucide-react";
 import ThemeToggle from "@/components/Themetoggle";
+import { useAuth, UserButton } from "@clerk/nextjs"; // <--- Imports
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
-  const pathname = usePathname();
+  const { isSignedIn, isLoaded } = useAuth(); // <--- Check Auth
 
   useEffect(() => {
     const handleScroll = () => {
@@ -53,7 +53,7 @@ const Navbar = () => {
           </div>
         </Link>
 
-        {/* 2. Desktop Navigation (Centered) */}
+        {/* 2. Desktop Navigation */}
         <div className="hidden md:flex items-center gap-1 bg-slate-100/50 dark:bg-slate-900/50 p-1 rounded-full border border-slate-200/50 dark:border-slate-800/50 backdrop-blur-sm">
           {navLinks.map((link) => (
             <Link
@@ -66,22 +66,37 @@ const Navbar = () => {
           ))}
         </div>
 
-        {/* 3. Desktop Actions (Right) */}
+        {/* 3. Desktop Actions */}
         <div className="hidden md:flex items-center gap-3">
            <ThemeToggle />
            <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1" />
            
-           <Link href="/login">
-            <Button variant="ghost" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800">
-              Sign In
-            </Button>
-           </Link>
-           
-           <Link href="/dashboard">
-            <Button className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 shadow-md transition-all">
-              Dashboard <ChevronRight className="w-4 h-4 ml-1 opacity-50" />
-            </Button>
-           </Link>
+           {isLoaded && isSignedIn ? (
+             <>
+                <Link href="/dashboard">
+                  <Button variant="ghost" className="text-slate-600 dark:text-slate-300">
+                    Dashboard
+                  </Button>
+                </Link>
+                <div className="pl-2">
+                    <UserButton afterSignOutUrl="/" />
+                </div>
+             </>
+           ) : (
+             <>
+               <Link href="/login">
+                <Button variant="ghost" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800">
+                  Sign In
+                </Button>
+               </Link>
+               
+               <Link href="/login">
+                <Button className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 shadow-md transition-all">
+                  Get Started <ChevronRight className="w-4 h-4 ml-1 opacity-50" />
+                </Button>
+               </Link>
+             </>
+           )}
         </div>
 
         {/* 4. Mobile Menu Trigger */}
@@ -95,7 +110,6 @@ const Navbar = () => {
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] sm:w-[400px] border-l border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-0">
                 
-                {/* Mobile Header */}
                 <div className="p-6 border-b border-slate-100 dark:border-slate-900 bg-slate-50/50 dark:bg-slate-900/50">
                     <div className="flex items-center gap-2 mb-2">
                          <div className="h-8 w-8 bg-brand-500 rounded-lg flex items-center justify-center text-white">
@@ -106,7 +120,6 @@ const Navbar = () => {
                     <p className="text-xs text-muted-foreground">The all-in-one optimization suite.</p>
                 </div>
 
-                {/* Mobile Links */}
                 <div className="flex flex-col p-4 gap-2">
                   {navLinks.map((link) => (
                     <SheetClose asChild key={link.name}>
@@ -121,20 +134,30 @@ const Navbar = () => {
                   ))}
                 </div>
 
-                {/* Mobile Footer Actions */}
                 <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-slate-100 dark:border-slate-900 bg-slate-50/50 dark:bg-slate-900/50">
                     <div className="grid gap-3">
-                        <Link href="/login" className="w-full">
-                            <Button variant="outline" className="w-full justify-start border-slate-200 dark:border-slate-800">
-                                Log in to account
-                            </Button>
-                        </Link>
-                        <Link href="/dashboard" className="w-full">
-                            <Button className="w-full bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-brand-500/20">
-                                <LayoutDashboard className="w-4 h-4 mr-2" />
-                                Go to Dashboard
-                            </Button>
-                        </Link>
+                        {isLoaded && isSignedIn ? (
+                             <Link href="/dashboard" className="w-full">
+                                <Button className="w-full bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-brand-500/20">
+                                    <LayoutDashboard className="w-4 h-4 mr-2" />
+                                    Go to Dashboard
+                                </Button>
+                             </Link>
+                        ) : (
+                            <>
+                                <Link href="/login" className="w-full">
+                                    <Button variant="outline" className="w-full justify-start border-slate-200 dark:border-slate-800">
+                                        Log in to account
+                                    </Button>
+                                </Link>
+                                <Link href="/login" className="w-full">
+                                    <Button className="w-full bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-brand-500/20">
+                                        <ChevronRight className="w-4 h-4 mr-2" />
+                                        Get Started
+                                    </Button>
+                                </Link>
+                            </>
+                        )}
                     </div>
                 </div>
 
