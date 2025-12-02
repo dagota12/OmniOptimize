@@ -4,8 +4,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { useAuth, useSignIn, useSignUp } from "@clerk/nextjs"; // <--- Import Clerk Hooks
-import { useMutation } from "convex/react";
+import { useSignIn, useSignUp } from "@clerk/nextjs"; 
+import { useMutation, useConvexAuth } from "convex/react"; // <--- Import useConvexAuth
 import { api } from "@/convex/_generated/api";
 import {
   Sparkles,
@@ -15,10 +15,11 @@ import {
   Eye,
   EyeOff,
   Lock,
-  User,
   Mail,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  ArrowLeft,
+  KeyRound
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,19 +31,31 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
-  const { isSignedIn } = useAuth();
+  // --- NEW STATES FOR VERIFICATION ---
+  const [verifying, setVerifying] = useState(false); 
+  const [code, setCode] = useState(""); 
 
+  // --- AUTH HOOKS ---
+  // We use useConvexAuth() because it tells us when CONVEX has the token,
+  // preventing the "no authentication present" error.
+  const { isAuthenticated } = useConvexAuth(); 
+  
   const { isLoaded: isSignInLoaded, signIn, setActive: setSignInActive } = useSignIn();
   const { isLoaded: isSignUpLoaded, signUp, setActive: setSignUpActive } = useSignUp();
   
-  const storeUser = useMutation(api.users.store); // <--- Convex Sync Mutation
+  const storeUser = useMutation(api.users.store); 
   const router = useRouter();
 
+  // --- SYNC EFFECT ---
+  // Only triggers when Convex confirms it has the token
   useEffect(() => {
-    if (isSignedIn) {
-      router.push("/dashboard");
+    if (isAuthenticated) {
+      storeUser()
+        .then(() => router.push("/dashboard"))
+        .catch((err) => console.error("Sync error:", err));
     }
-  }, [isSignedIn, router]);
+  }, [isAuthenticated, router, storeUser]);
+
   // --- HANDLE LOGIN ---
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -58,18 +71,15 @@ export default function AuthPage() {
 
       if (result.status === "complete") {
         await setSignInActive({ session: result.createdSessionId });
-        // Sync user to Convex immediately
-        await storeUser(); 
-        router.push("/dashboard");
+        // Redirect handled by useEffect above
       } else {
-        console.log(result);
         setError("Login requires additional steps (MFA not supported in this demo).");
+        setIsLoading(false);
       }
     } catch (err) {
       setError(err.errors?.[0]?.message || "Something went wrong.");
-    } finally {
       setIsLoading(false);
-    }
+    } 
   };
 
   // --- HANDLE SIGN UP ---
@@ -81,24 +91,11 @@ export default function AuthPage() {
 
     const email = e.target.email.value;
     const password = e.target.password.value;
-    // Note: Clerk often requires a Code Verification step for email signups.
-    // For simplicity here, we assume email verification is optional in your dev environment,
-    // OR you must implement the Code Verification UI flow next.
     
     try {
-      const result = await signUp.create({ emailAddress: email, password });
-      
-      // Check if verification is needed
-      if (result.status === "missing_requirements") {
-         // In a real app, you'd flip to a "Verify Code" screen here.
-         await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
-         alert("We sent a code to your email. (Verification UI logic needed here)");
-         // For demo purposes, we stop here.
-      } else if (result.status === "complete") {
-        await setSignUpActive({ session: result.createdSessionId });
-        await storeUser();
-        router.push("/dashboard");
-      }
+      await signUp.create({ emailAddress: email, password });
+      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      setVerifying(true); 
     } catch (err) {
       setError(err.errors?.[0]?.message || "Sign up failed.");
     } finally {
@@ -106,10 +103,32 @@ export default function AuthPage() {
     }
   };
 
-  // --- OAUTH HANDLER (Google/GitHub) ---
+  // --- HANDLE VERIFICATION ---
+  const handleVerify = async (e) => {
+    e.preventDefault();
+    if(!isSignUpLoaded) return;
+    setIsLoading(true);
+    setError("");
+
+    try {
+        const result = await signUp.attemptEmailAddressVerification({ code });
+
+        if (result.status === "complete") {
+            await setSignUpActive({ session: result.createdSessionId });
+            // Redirect handled by useEffect above
+        } else {
+            setError("Verification failed. Please check the code.");
+            setIsLoading(false);
+        }
+    } catch (err) {
+        setError(err.errors?.[0]?.message || "Invalid code.");
+        setIsLoading(false);
+    } 
+  };
+
+  // --- OAUTH HANDLER ---
   const handleOAuth = (strategy) => {
     if(!isSignInLoaded) return;
-    // Redirects to Google/GitHub
     signIn.authenticateWithRedirect({
       strategy,
       redirectUrl: "/sso-callback",
@@ -123,10 +142,8 @@ export default function AuthPage() {
       {/* --- LEFT SIDE: FORM CONTAINER --- */}
       <div className="relative flex flex-col justify-center items-center px-4 sm:px-6 lg:px-20 xl:px-24 border-r border-slate-200 dark:border-slate-800 perspective-1000">
         
-        {/* Subtle Grid Background */}
         <div className="absolute inset-0 bg-grid-light dark:bg-grid-dark opacity-[0.4] pointer-events-none" />
 
-        {/* Logo */}
         <div className="absolute top-8 left-8 flex items-center gap-2 z-20">
             <Link href="/" className="flex items-center gap-2 group">
                 <div className="h-8 w-8 bg-brand-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-brand-500/20 transition-transform group-hover:rotate-12">
@@ -158,7 +175,7 @@ export default function AuthPage() {
                         <p className="text-slate-600 dark:text-slate-400 text-sm">Enter your credentials to access your dashboard.</p>
                     </div>
 
-                    {error && (
+                    {error && !verifying && isLogin && (
                         <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded flex items-center gap-2 text-xs text-red-600 dark:text-red-400">
                             <AlertCircle className="w-4 h-4" /> {error}
                         </div>
@@ -214,51 +231,105 @@ export default function AuthPage() {
                     </p>
                 </div>
 
-                {/* === BACK FACE (SIGN UP) === */}
+                {/* === BACK FACE (SIGN UP & VERIFICATION) === */}
                 <div 
                     className="absolute inset-0 w-full h-full backface-hidden bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl"
                     style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
                 >
-                    <div className="mb-6 text-center">
-                        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">Create Account</h1>
-                        <p className="text-slate-600 dark:text-slate-400 text-sm">Start optimizing your web performance.</p>
-                    </div>
+                    {/* CONDITIONAL: VERIFICATION VS SIGN UP */}
+                    {verifying ? (
+                        // --- VERIFICATION MODE ---
+                        <div className="h-full flex flex-col justify-center animate-in fade-in zoom-in-95 duration-300">
+                            <div className="text-center mb-6">
+                                <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-4">
+                                    <Mail className="w-6 h-6 text-green-600 dark:text-green-400" />
+                                </div>
+                                <h1 className="text-xl font-bold text-slate-900 dark:text-white">Check your email</h1>
+                                <p className="text-sm text-slate-500 mt-2">
+                                    We sent a verification code to your email. Enter it below.
+                                </p>
+                            </div>
 
-                     {error && (
-                        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded flex items-center gap-2 text-xs text-red-600 dark:text-red-400">
-                            <AlertCircle className="w-4 h-4" /> {error}
+                            {error && (
+                                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded flex items-center gap-2 text-xs text-red-600 dark:text-red-400">
+                                    <AlertCircle className="w-4 h-4" /> {error}
+                                </div>
+                            )}
+
+                            <form onSubmit={handleVerify} className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label className="text-slate-700 dark:text-slate-300 text-xs uppercase font-bold tracking-wider">Verification Code</Label>
+                                    <div className="relative">
+                                        <Input 
+                                            value={code}
+                                            onChange={(e) => setCode(e.target.value)}
+                                            placeholder="123456" 
+                                            className="pl-10 h-11 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 font-mono text-lg tracking-widest text-center" 
+                                            maxLength={6}
+                                            required 
+                                        />
+                                        <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                    </div>
+                                </div>
+                                <Button type="submit" className="w-full h-11 bg-brand-600 hover:bg-brand-700 text-white font-medium shadow-lg" disabled={isLoading}>
+                                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify & Continue"}
+                                </Button>
+                            </form>
+                            
+                            <button 
+                                onClick={() => { setVerifying(false); setError(""); }}
+                                className="mt-6 flex items-center justify-center gap-2 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                            >
+                                <ArrowLeft className="w-3 h-3" /> Back to Sign Up
+                            </button>
                         </div>
+                    ) : (
+                        // --- SIGN UP MODE ---
+                        <>
+                            <div className="mb-6 text-center">
+                                <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">Create Account</h1>
+                                <p className="text-slate-600 dark:text-slate-400 text-sm">Start optimizing your web performance.</p>
+                            </div>
+
+                            {error && (
+                                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded flex items-center gap-2 text-xs text-red-600 dark:text-red-400">
+                                    <AlertCircle className="w-4 h-4" /> {error}
+                                </div>
+                            )}
+
+                            <form onSubmit={handleSignUp} className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label className="text-slate-700 dark:text-slate-300 text-xs uppercase font-bold tracking-wider">Email</Label>
+                                    <div className="relative">
+                                        <Input name="email" type="email" placeholder="name@company.com" className="pl-10 h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" required />
+                                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label className="text-slate-700 dark:text-slate-300 text-xs uppercase font-bold tracking-wider">Password</Label>
+                                    <div className="relative">
+                                        <Input name="password" type="password" placeholder="Create a password" className="pl-10 h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" required />
+                                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                    </div>
+                                </div>
+
+                                {/* !!! FIX FOR ISSUE 1: CLERK CAPTCHA CONTAINER !!! */}
+                                <div id="clerk-captcha" />
+
+                                <Button type="submit" className="w-full h-10 bg-brand-600 hover:bg-brand-700 text-white font-medium shadow-lg mt-2" disabled={isLoading}>
+                                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Account"}
+                                </Button>
+                            </form>
+
+                            <p className="mt-6 text-center text-xs text-slate-500">
+                                Already have an account?{" "}
+                                <button onClick={() => { setIsLogin(true); setError(""); }} className="font-bold text-brand-600 hover:underline">
+                                    Log in
+                                </button>
+                            </p>
+                        </>
                     )}
-
-                    <form onSubmit={handleSignUp} className="space-y-4">
-                        {/* Name field is optional in simple Clerk email flow, removing to simplify for now */}
-                        <div className="space-y-2">
-                            <Label className="text-slate-700 dark:text-slate-300 text-xs uppercase font-bold tracking-wider">Email</Label>
-                            <div className="relative">
-                                <Input name="email" type="email" placeholder="name@company.com" className="pl-10 h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" required />
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label className="text-slate-700 dark:text-slate-300 text-xs uppercase font-bold tracking-wider">Password</Label>
-                            <div className="relative">
-                                <Input name="password" type="password" placeholder="Create a password" className="pl-10 h-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" required />
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                            </div>
-                        </div>
-
-                        <Button type="submit" className="w-full h-10 bg-brand-600 hover:bg-brand-700 text-white font-medium shadow-lg mt-2" disabled={isLoading}>
-                            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Account"}
-                        </Button>
-                    </form>
-
-                    <p className="mt-6 text-center text-xs text-slate-500">
-                        Already have an account?{" "}
-                        <button onClick={() => { setIsLogin(true); setError(""); }} className="font-bold text-brand-600 hover:underline">
-                            Log in
-                        </button>
-                    </p>
                 </div>
 
             </motion.div>
@@ -274,9 +345,8 @@ export default function AuthPage() {
         </div>
       </div>
 
-      {/* --- RIGHT SIDE: VISUAL (Hidden on mobile) --- */}
+      {/* --- RIGHT SIDE: VISUAL --- */}
       <div className="hidden lg:block relative bg-slate-900 overflow-hidden">
-        {/* Background Image - Abstract Data/Tech */}
         <Image 
             src="https://images.unsplash.com/photo-1558494949-ef010cbdcc31?q=80&w=2534&auto=format&fit=crop"
             alt="Data Center Abstract"
@@ -284,14 +354,10 @@ export default function AuthPage() {
             className="object-cover opacity-40 mix-blend-overlay"
             priority
         />
-        
-        {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/50 to-brand-900/20" />
-
-        {/* Floating Content */}
+        
+        {/* Testimonial Card */}
         <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center z-10">
-            
-            {/* Glass Card - Testimonial */}
             <motion.div 
                 initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -321,7 +387,6 @@ export default function AuthPage() {
                 </div>
             </motion.div>
 
-            {/* Bottom Tech Stats */}
             <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -337,7 +402,6 @@ export default function AuthPage() {
                     <span>256-bit Encryption</span>
                 </div>
             </motion.div>
-
         </div>
       </div>
 
