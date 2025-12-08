@@ -43,9 +43,17 @@ const createConfig = (pkgName) => ({
       },
     }),
   ],
-  // For react package, externalize react/react-dom
-  external: pkgName === "react" ? ["react", "react-dom"] : [],
+  // For react package, externalize react/react-dom and SDK
+  external:
+    pkgName === "react" ? ["react", "react-dom", "@omni-analytics/sdk"] : [],
 });
 
 // Build configurations for both packages
-export default [createConfig("sdk"), createConfig("react")];
+import { env } from "process";
+
+// Determine which packages to build based on working directory or environment
+const packagesToBuild = env.ONLY_PACKAGE
+  ? [env.ONLY_PACKAGE]
+  : ["sdk", "react"];
+
+export default packagesToBuild.map((pkg) => createConfig(pkg));
