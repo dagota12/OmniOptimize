@@ -1,16 +1,20 @@
 {
   "name": "@omni-analytics/sdk",
   "version": "0.1.0",
-  "main": "./dist/index.cjs.js",
+  "type": "module",
+  "main": "./dist/index.esm.js",
   "module": "./dist/index.esm.js",
   "browser": "./dist/index.umd.js",
   "scripts": {
-    "build": "cd ../.. && rollup -c rollup.config.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "cd ../.. && rollup -c rollup.config.js --watch"
+    "build": "rollup -c ../../rollup.config.js",
+    "dev": "rollup -c ../../rollup.config.js --watch"
   },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "keywords": [],
-  "author": "",
+  "author": "dagota12",
   "license": "ISC",
   "packageManager": "pnpm@10.24.0"
 }
