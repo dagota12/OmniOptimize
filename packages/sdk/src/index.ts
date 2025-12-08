@@ -21,9 +21,23 @@ let globalContainer: Container | null = null;
 
 /**
  * Initialize the Omni SDK with configuration
+ * This automatically sets up and initializes all plugins
  */
-export function initializeSDK(config: SDKConfig) {
+export async function initializeSDK(config: SDKConfig) {
+  if (globalContainer) {
+    console.warn(
+      "[OmniSDK] SDK already initialized, returning existing instance"
+    );
+    return {
+      tracker: globalContainer.getTracker(),
+      container: globalContainer,
+    };
+  }
+
   globalContainer = new Container(config);
+
+  // Initialize plugins (this is where auto-tracking gets set up)
+  await globalContainer.initialize();
 
   return {
     tracker: globalContainer.getTracker(),
@@ -45,9 +59,9 @@ export function getSDK() {
 /**
  * Destroy the global SDK instance
  */
-export function destroySDK() {
+export async function destroySDK() {
   if (globalContainer) {
-    globalContainer.destroy();
+    await globalContainer.destroy();
     globalContainer = null;
   }
 }
@@ -55,6 +69,7 @@ export function destroySDK() {
 // Export all public types and classes
 export * from "./types";
 export { Container } from "./di/Container";
+export type { ContainerOptions } from "./di/Container";
 export { Tracker } from "./tracker/Tracker";
 export { Config } from "./config/Config";
 export { SessionManager } from "./session/SessionManager";
@@ -64,3 +79,10 @@ export {
   FetchTransmitter,
   BeaconTransmitter,
 } from "./transmitter";
+export { PluginRegistry } from "./plugins/PluginRegistry";
+export { PageViewPlugin } from "./plugins/page-view/PageViewPlugin";
+export {
+  ClickTrackingPlugin,
+  type ClickTrackingOptions,
+} from "./plugins/click-tracking/ClickTrackingPlugin";
+export type { IPlugin, PluginContext, Logger } from "./types";

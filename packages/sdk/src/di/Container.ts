@@ -11,7 +11,11 @@ import { SessionManager } from "../session/SessionManager";
 import { Tracker } from "../tracker/Tracker";
 import { EventQueue } from "../queue/EventQueue";
 import { FetchTransmitter, BeaconTransmitter } from "../transmitter";
+import { PluginRegistry } from "../plugins/PluginRegistry";
+import { PageViewPlugin } from "../plugins/page-view/PageViewPlugin";
+import { ClickTrackingPlugin } from "../plugins/click-tracking/ClickTrackingPlugin";
 import type { ITransmitter } from "../transmitter/ITransmitter";
+import type { IPlugin } from "../types";
 
 /**
  * Container options for customization
@@ -31,6 +35,17 @@ export interface ContainerOptions {
    * Custom Tracker implementation
    */
   tracker?: Tracker;
+
+  /**
+   * Plugins to register (in addition to default auto-tracking plugins)
+   */
+  plugins?: IPlugin[];
+
+  /**
+   * Enable default auto-tracking plugins (PageView + Click tracking)
+   * Default: true
+   */
+  enableAutoTracking?: boolean;
 }
 
 /**
@@ -42,6 +57,8 @@ export class Container {
   private transmitters: ITransmitter[];
   private eventQueue: EventQueue;
   private tracker: Tracker;
+  private pluginRegistry: PluginRegistry;
+  private initialized = false;
 
   constructor(sdkConfig: SDKConfig, options?: ContainerOptions) {
     // Initialize Config
@@ -76,8 +93,54 @@ export class Container {
       options?.tracker ??
       new Tracker(this.config, this.sessionManager, this.eventQueue);
 
+    // Initialize Plugin Registry
+    this.pluginRegistry = new PluginRegistry();
+
+    // Register default auto-tracking plugins
+    const enableAutoTracking = options?.enableAutoTracking !== false;
+    if (enableAutoTracking) {
+      this.pluginRegistry.register(new PageViewPlugin());
+      this.pluginRegistry.register(new ClickTrackingPlugin());
+    }
+
+    // Register custom plugins
+    if (options?.plugins) {
+      for (const plugin of options.plugins) {
+        this.pluginRegistry.register(plugin);
+      }
+    }
+
     if (this.config.isDebugEnabled()) {
       console.log("[Container] SDK initialized with all dependencies");
+    }
+  }
+
+  /**
+   * Initialize the container and all plugins
+   * Must be called after construction
+   */
+  async initialize(): Promise<void> {
+    if (this.initialized) {
+      return;
+    }
+
+    await this.pluginRegistry.initialize({
+      tracker: this.tracker,
+      config: this.config,
+      logger: this.config.isDebugEnabled()
+        ? {
+            debug: (msg, data) => console.log(`[OmniSDK] ${msg}`, data),
+            info: (msg, data) => console.info(`[OmniSDK] ${msg}`, data),
+            warn: (msg, data) => console.warn(`[OmniSDK] ${msg}`, data),
+            error: (msg, err) => console.error(`[OmniSDK] ${msg}`, err),
+          }
+        : undefined,
+    });
+
+    this.initialized = true;
+
+    if (this.config.isDebugEnabled()) {
+      console.log("[Container] All plugins initialized");
     }
   }
 
@@ -117,11 +180,27 @@ export class Container {
   }
 
   /**
+   * Get plugin registry
+   */
+  getPluginRegistry(): PluginRegistry {
+    return this.pluginRegistry;
+  }
+
+  /**
+   * Check if initialized
+   */
+  isInitialized(): boolean {
+    return this.initialized;
+  }
+
+  /**
    * Destroy container and cleanup resources
    */
-  destroy(): void {
+  async destroy(): Promise<void> {
+    await this.pluginRegistry.destroy();
     this.eventQueue.destroy();
     this.sessionManager.clearSession();
+    this.initialized = false;
 
     if (this.config.isDebugEnabled()) {
       console.log("[Container] SDK destroyed");
