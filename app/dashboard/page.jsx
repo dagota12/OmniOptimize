@@ -1,14 +1,21 @@
 "use client";
 import React from "react";
 import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
 } from "recharts";
 import { 
-  ArrowUpRight, ArrowDownRight, Activity, Users, MousePointer2, GitCommit, ShieldCheck 
+  ArrowUpRight, ArrowDownRight, Activity, Users, MousePointer2, ShieldCheck, GitCommit, Loader2 
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { mockOverview } from "@/data/mockDashboard";
+import { mockOverview } from "@/data/mockDashboard"; // Keeping mock data for charts as requested
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
+
+// 1. Imports for Real Data
+import { useProject } from "@/app/_context/ProjectContext";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { formatDistanceToNow } from "date-fns";
 
 const trafficData = [
   { name: "Mon", visits: 4000, bounce: 2400 },
@@ -21,6 +28,21 @@ const trafficData = [
 ];
 
 export default function DashboardOverview() {
+  // 2. Hook into Project Context & Convex
+  const { activeProject } = useProject();
+  
+  // Fetch only if we have a project selected
+  const recentCommits = useQuery(api.queries.getCommits, 
+    activeProject ? { projectId: activeProject._id } : "skip"
+  );
+
+  // Helper to determine status based on real Risk Score
+  const getStatus = (score) => {
+    if (score >= 80) return { label: 'Critical', color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" };
+    if (score >= 40) return { label: 'Warning', color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" };
+    return { label: 'Safe', color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" };
+  };
+
   return (
     <div className="space-y-8">
       
@@ -28,23 +50,23 @@ export default function DashboardOverview() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
             <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Overview</h2>
-            <p className="text-slate-500 dark:text-slate-400">Here's what's happening with <span className="font-semibold text-slate-900 dark:text-white">wego.com.et</span> today.</p>
+            <p className="text-slate-500 dark:text-slate-400">
+                Here's what's happening with <span className="font-semibold text-slate-900 dark:text-white">{activeProject?.name || "your project"}</span> today.
+            </p>
         </div>
         <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500">Last updated: Just now</span>
+            <span className="text-xs text-slate-500">Last updated: Real-time</span>
         </div>
       </div>
 
-      {/* 2. Stats Grid */}
+      {/* 2. Stats Grid (Mock for now, as requested) */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        
         {mockOverview.metrics.map((metric, i) => (
             <Card key={i} className="border-slate-200 dark:border-slate-800 shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">
                         {metric.title}
                     </CardTitle>
-                    {/* Dynamic Icons based on title */}
                     {metric.title.includes("Visits") ? <Users className="h-4 w-4 text-slate-400" /> :
                      metric.title.includes("Session") ? <Activity className="h-4 w-4 text-slate-400" /> :
                      metric.title.includes("Bounce") ? <MousePointer2 className="h-4 w-4 text-slate-400" /> :
@@ -68,7 +90,7 @@ export default function DashboardOverview() {
       {/* 3. Main Charts Area */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         
-        {/* Traffic Chart (Takes 4 cols) */}
+        {/* Traffic Chart (Mock) */}
         <Card className="col-span-4 border-slate-200 dark:border-slate-800 shadow-sm">
             <CardHeader>
                 <CardTitle>Traffic Overview</CardTitle>
@@ -85,80 +107,88 @@ export default function DashboardOverview() {
                                 </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-800" vertical={false} />
-                            <XAxis 
-                                dataKey="name" 
-                                stroke="#888888" 
-                                fontSize={12} 
-                                tickLine={false} 
-                                axisLine={false} 
-                            />
-                            <YAxis 
-                                stroke="#888888" 
-                                fontSize={12} 
-                                tickLine={false} 
-                                axisLine={false} 
-                                tickFormatter={(value) => `${value}`} 
-                            />
-                            <Tooltip 
-                                contentStyle={{ backgroundColor: "#1e293b", border: "none", borderRadius: "8px", color: "#fff" }}
-                            />
-                            <Area 
-                                type="monotone" 
-                                dataKey="visits" 
-                                stroke="#10b981" 
-                                strokeWidth={2}
-                                fillOpacity={1} 
-                                fill="url(#colorVisits)" 
-                            />
+                            <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                            <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
+                            <Tooltip contentStyle={{ backgroundColor: "#1e293b", border: "none", borderRadius: "8px", color: "#fff" }} />
+                            <Area type="monotone" dataKey="visits" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorVisits)" />
                         </AreaChart>
                     </ResponsiveContainer>
                 </div>
             </CardContent>
         </Card>
 
-        {/* Recent Activity / Code Log (Takes 3 cols) */}
-        <Card className="col-span-3 border-slate-200 dark:border-slate-800 shadow-sm">
+        {/* --- 4. REAL CODE HEALTH DATA --- */}
+        <Card className="col-span-3 border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
             <CardHeader>
                 <CardTitle>Recent Code Commits</CardTitle>
-                <CardDescription>Security scans from GitHub.</CardDescription>
+                <CardDescription>
+                    {activeProject ? "Real-time security scans from GitHub." : "Select a project to view commits."}
+                </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 overflow-hidden">
                 <div className="space-y-6">
-                    {mockOverview.recentCommits.map((commit, i) => (
-                        <div key={i} className="flex items-start gap-4">
-                            <div className="relative mt-1">
-                                <div className="z-10 relative flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                                    <GitCommit className="h-4 w-4 text-slate-500" />
-                                </div>
-                                {i !== mockOverview.recentCommits.length - 1 && (
-                                    <div className="absolute left-4 top-8 h-full w-px bg-slate-200 dark:bg-slate-800" />
-                                )}
-                            </div>
-                            <div className="flex-1 space-y-1">
-                                <p className="text-sm font-medium text-slate-900 dark:text-white leading-none">
-                                    {commit.message}
-                                </p>
-                                <div className="flex items-center gap-2 text-xs text-slate-500">
-                                    <span>{commit.author}</span>
-                                    <span>•</span>
-                                    <span>{commit.time}</span>
-                                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] uppercase font-bold ${
-                                        commit.status === 'safe' 
-                                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
-                                            : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                                    }`}>
-                                        {commit.status}
-                                    </span>
-                                </div>
-                            </div>
+                    {/* A. Loading State */}
+                    {recentCommits === undefined && (
+                        <div className="flex flex-col items-center justify-center h-40 text-slate-500">
+                            <Loader2 className="w-6 h-6 animate-spin mb-2 text-brand-500" />
+                            <p className="text-xs">Syncing commits...</p>
                         </div>
-                    ))}
+                    )}
+
+                    {/* B. Empty State */}
+                    {recentCommits && recentCommits.length === 0 && (
+                        <div className="flex flex-col items-center justify-center h-40 text-slate-500 text-center">
+                            <GitCommit className="w-8 h-8 mb-2 opacity-20" />
+                            <p className="text-sm font-medium">No commits scanned yet.</p>
+                            <p className="text-xs mt-1">Push code to GitHub to trigger the AI agent.</p>
+                        </div>
+                    )}
+
+                    {/* C. Real Data List */}
+                    {recentCommits && recentCommits.slice(0, 5).map((commit, i) => {
+                        const status = getStatus(commit.riskScore || 0);
+                        return (
+                            <div key={commit._id} className="flex items-start gap-4 group">
+                                <div className="relative mt-1">
+                                    <div className="z-10 relative flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 group-hover:border-brand-500/50 transition-colors">
+                                        <GitCommit className="h-4 w-4 text-slate-500" />
+                                    </div>
+                                    {/* Vertical Line */}
+                                    {i !== recentCommits.length - 1 && (
+                                        <div className="absolute left-4 top-8 h-12 w-px bg-slate-200 dark:bg-slate-800" />
+                                    )}
+                                </div>
+                                <div className="flex-1 space-y-1 pb-2">
+                                    <p className="text-sm font-medium text-slate-900 dark:text-white leading-tight line-clamp-1 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+                                        {commit.message}
+                                    </p>
+                                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                                        <span>{commit.author}</span>
+                                        <span>•</span>
+                                        <span>
+                                            {commit.createdAt 
+                                                ? formatDistanceToNow(commit.createdAt, { addSuffix: true }) 
+                                                : "Just now"}
+                                        </span>
+                                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] uppercase font-bold ${status.color}`}>
+                                            {status.label}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
-                <div className="mt-6">
-                    <Button variant="outline" size="sm" className="w-full text-xs">
-                        View All Commits
-                    </Button>
-                </div>
+                
+                {recentCommits && recentCommits.length > 0 && (
+                    <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+                        <Link href="/code">
+                            <Button variant="outline" size="sm" className="w-full text-xs">
+                                View Full Scan History
+                            </Button>
+                        </Link>
+                    </div>
+                )}
             </CardContent>
         </Card>
 
