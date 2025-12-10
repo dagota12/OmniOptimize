@@ -1,17 +1,23 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Copy, Github, Check } from "lucide-react";
-import { useState } from "react";
+import { Copy, Github, Check, AlertCircle } from "lucide-react";
 
-const IntegrationsSettings = () => {
+const IntegrationsSettings = ({ projectId }) => {
   const [copied, setCopied] = useState(false);
-  // Mock convex URL - we will replace this with real one later
-  const webhookUrl = "https://happy-otter-123.convex.site/clerk/github-webhook"; 
+  
+  // Construct the Unique URL based on the passed prop
+  const baseUrl = process.env.NEXT_PUBLIC_CONVEX_URL?.replace(".cloud", ".site") || "https://your-convex-url.site";
+  
+  // Fallback if no project is selected yet
+  const webhookUrl = projectId 
+    ? `${baseUrl}/github-webhook?projectId=${projectId}`
+    : "Please select a project from the top-left switcher first.";
 
   const handleCopy = () => {
+    if (!projectId) return;
     navigator.clipboard.writeText(webhookUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -32,19 +38,33 @@ const IntegrationsSettings = () => {
         <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 space-y-3">
             <div className="flex justify-between items-center">
                 <span className="text-xs font-bold uppercase text-slate-500">Payload URL</span>
-                <span className="text-[10px] text-brand-600 bg-brand-50 dark:bg-brand-900/20 px-2 py-0.5 rounded-full">Listening</span>
+                {projectId ? (
+                    <span className="text-[10px] text-brand-600 bg-brand-50 dark:bg-brand-900/20 px-2 py-0.5 rounded-full font-mono">
+                        ID: {projectId.slice(0, 12)}...
+                    </span>
+                ) : (
+                    <span className="text-[10px] text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> No Project Selected
+                    </span>
+                )}
             </div>
+            
             <div className="flex gap-2">
-                <Input value={webhookUrl} readOnly className="font-mono text-xs h-9 bg-white dark:bg-slate-950" />
-                <Button size="sm" variant="outline" onClick={handleCopy}>
+                <Input 
+                    value={webhookUrl} 
+                    readOnly 
+                    className={`font-mono text-xs h-9 bg-white dark:bg-slate-950 ${!projectId ? "text-slate-400 italic" : ""}`} 
+                />
+                <Button size="sm" variant="outline" onClick={handleCopy} disabled={!projectId}>
                     {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                 </Button>
             </div>
-            <div className="text-xs text-slate-500">
-                <p>1. Go to your Repo &gt; Settings &gt; Webhooks.</p>
-                <p>2. Paste this URL.</p>
-                <p>3. Select Content type: <span className="font-mono text-slate-700 dark:text-slate-300">application/json</span>.</p>
-                <p>4. Select event: <span className="font-mono text-slate-700 dark:text-slate-300">Check runs</span> & <span className="font-mono text-slate-700 dark:text-slate-300">Pushes</span>.</p>
+
+            <div className="text-xs text-slate-500 space-y-1">
+                <p>1. Go to your GitHub Repo &gt; <strong>Settings</strong> &gt; <strong>Webhooks</strong>.</p>
+                <p>2. Paste the URL above into <strong>Payload URL</strong>.</p>
+                <p>3. Select Content type: <span className="font-mono text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-800 px-1 rounded">application/json</span>.</p>
+                <p>4. Select event: <span className="font-mono text-slate-700 dark:text-slate-300">Just the push event</span>.</p>
             </div>
         </div>
 

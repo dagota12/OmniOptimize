@@ -1,92 +1,26 @@
 "use client";
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { GitCommit, AlertTriangle, CheckCircle2, XCircle, MessageSquare, ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { AlertTriangle, CheckCircle2, XCircle, MessageSquare, Loader2, GitCommit } from "lucide-react";
 import CommitDetailSheet from "./CommitDetailSheet";
-
-// ENHANCED MOCK DATA
-const commits = [
-  {
-    sha: "5e6f7g8",
-    message: "feat: user profile page query",
-    author: "sami-dev",
-    time: "2 days ago",
-    riskScore: 92, // High Risk
-    status: "critical",
-    aiComments: 4,
-    summary: "This commit introduces a severe SQL Injection vulnerability by concatenating user input directly into a database query string.",
-    issues: [
-        { 
-            severity: "high", 
-            title: "SQL Injection Risk", 
-            location: "src/db/users.ts:42",
-            desc: "Raw query parameters used directly in SQL string. This allows attackers to manipulate the query.", 
-            fixType: "code",
-            fixContent: "const user = await db.query('SELECT * FROM users WHERE id = $1', [req.body.id]);",
-            explanation: "Use parameterized queries (prepared statements) to sanitize input automatically."
-        },
-        { 
-            severity: "medium", 
-            title: "Missing Error Handling", 
-            location: "src/db/users.ts:48",
-            desc: "The database call is not wrapped in a try/catch block.", 
-            fixType: "text",
-            fixContent: "Wrap the database await call in a try/catch block and return a 500 status code if it fails.",
-            explanation: null
-        }
-    ]
-  },
-  {
-    sha: "8a2b9f1",
-    message: "feat: implement stripe webhook handler",
-    author: "sami-dev",
-    time: "10 mins ago",
-    riskScore: 45, // Medium Risk
-    status: "warning",
-    aiComments: 2,
-    summary: "Logic is sound, but security best practices regarding logging are violated.",
-    issues: [
-        { 
-            severity: "medium", 
-            title: "Sensitive Data Logged", 
-            location: "src/api/webhooks.ts:15",
-            desc: "You are console logging the Stripe Secret Key environment variable.", 
-            fixType: "code",
-            fixContent: "// console.log(process.env.STRIPE_KEY); \nconsole.log('Stripe webhook received');",
-            explanation: "Never output secrets to stdout/logs."
-        }
-    ]
-  },
-  {
-    sha: "b4c1d2e",
-    message: "fix: resolve hydration error on navbar",
-    author: "sami-dev",
-    time: "2 hours ago",
-    riskScore: 5, // Low Risk
-    status: "safe",
-    aiComments: 0,
-    summary: "Clean fix. No security regressions detected.",
-    issues: []
-  },
-  {
-    sha: "1a2b3c4",
-    message: "refactor: optimize image loading strategy",
-    author: "bot-optimize",
-    time: "1 day ago",
-    riskScore: 0, // Perfect
-    status: "safe",
-    aiComments: 1,
-    summary: "Automated optimization. Performance metrics improved.",
-    issues: []
-  }
-];
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { formatDistanceToNow } from "date-fns"; 
+import { useProject } from "@/app/_context/ProjectContext"; // <--- 1. Import Context
 
 const CommitLog = () => {
   const [selectedCommit, setSelectedCommit] = useState(null);
+  
+  // 2. Get the REAL active project from Context
+  const { activeProject } = useProject();
 
-  // Helper to determine status color based on score
+  // 3. Fetch data dynamically based on the active project ID
+  // We skip the query if activeProject is null to prevent errors
+  const rawCommits = useQuery(api.queries.getCommits, 
+    activeProject ? { projectId: activeProject._id } : "skip"
+  );
+
+  // Helper to determine status color
   const getStatusColor = (score) => {
     if (score >= 80) return "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"; // Critical
     if (score >= 40) return "bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400"; // Warning
@@ -98,6 +32,32 @@ const CommitLog = () => {
     if (score >= 40) return <AlertTriangle className="w-5 h-5" />;
     return <CheckCircle2 className="w-5 h-5" />;
   };
+
+  // 4. Loading State
+  if (!activeProject || rawCommits === undefined) {
+    return (
+        <Card className="border-slate-200 dark:border-slate-800 shadow-sm min-h-[200px] flex items-center justify-center">
+            <div className="flex flex-col items-center gap-2 text-slate-500">
+                <Loader2 className="w-6 h-6 animate-spin text-brand-600" />
+                <span className="text-sm">Syncing with GitHub...</span>
+            </div>
+        </Card>
+    );
+  }
+
+  // 5. Transform DB data to UI format
+  const commits = rawCommits.map(c => ({
+      _id: c._id,
+      sha: c.commitHash ? c.commitHash.substring(0, 7) : "unknown",
+      message: c.message || "No commit message",
+      author: c.author || "Unknown",
+      // Safely handle date
+      time: c.createdAt ? formatDistanceToNow(c.createdAt, { addSuffix: true }) : "Just now",
+      riskScore: c.riskScore || 0,
+      summary: c.aiSummary || "Analysis pending...",
+      issues: c.issues || [],
+      aiComments: c.issues ? c.issues.length : 0
+  }));
 
   return (
     <>
@@ -114,58 +74,74 @@ const CommitLog = () => {
         </CardHeader>
         <CardContent className="p-0">
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
-            {commits.map((commit) => (
-              <div 
-                key={commit.sha} 
-                onClick={() => setSelectedCommit(commit)}
-                className="flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-all cursor-pointer group"
-              >
-                <div className="flex items-start gap-4">
-                    {/* Dynamic Status Icon */}
-                    <div className={`mt-1 p-2 rounded-full ${getStatusColor(commit.riskScore)}`}>
-                        {getStatusIcon(commit.riskScore)}
-                    </div>
-
-                    <div>
-                        <div className="flex items-center gap-3">
-                            <p className="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
-                                {commit.message}
-                            </p>
-                            <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px] font-mono text-slate-500">
-                                {commit.sha}
-                            </span>
+            
+            {commits.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+                    <GitCommit className="w-10 h-10 mb-3 opacity-20" />
+                    <p className="font-medium">No commits found yet</p>
+                    <p className="text-xs max-w-[250px] text-center mt-1">
+                        Push code to your connected repository to trigger the first security scan.
+                    </p>
+                </div>
+            ) : (
+                commits.map((commit) => (
+                <div 
+                    key={commit._id} 
+                    onClick={() => setSelectedCommit(commit)}
+                    className="flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-all cursor-pointer group"
+                >
+                    <div className="flex items-start gap-4">
+                        {/* Dynamic Status Icon */}
+                        <div className={`mt-1 p-2 rounded-full ${getStatusColor(commit.riskScore)}`}>
+                            {getStatusIcon(commit.riskScore)}
                         </div>
-                        
-                        <div className="flex items-center gap-4 mt-1.5 text-xs text-slate-500">
-                            <span>by {commit.author}</span>
-                            <span>•</span>
-                            <span>{commit.time}</span>
-                            
-                            {/* AI Comment Count */}
-                            {commit.aiComments > 0 && (
-                                <span className="flex items-center gap-1 text-slate-600 dark:text-slate-300 font-medium bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
-                                    <MessageSquare className="w-3 h-3" />
-                                    {commit.aiComments} AI Notes
+
+                        <div>
+                            <div className="flex items-center gap-3">
+                                <p className="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors line-clamp-1">
+                                    {commit.message}
+                                </p>
+                                <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px] font-mono text-slate-500">
+                                    {commit.sha}
                                 </span>
-                            )}
+                            </div>
+                            
+                            <div className="flex items-center gap-4 mt-1.5 text-xs text-slate-500">
+                                <span className="flex items-center gap-1">
+                                    <span className="w-4 h-4 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[8px] font-bold">
+                                        {commit.author.substring(0,1).toUpperCase()}
+                                    </span>
+                                    {commit.author}
+                                </span>
+                                <span>•</span>
+                                <span>{commit.time}</span>
+                                
+                                {/* AI Comment Count */}
+                                {commit.aiComments > 0 && (
+                                    <span className="flex items-center gap-1 text-slate-600 dark:text-slate-300 font-medium bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                                        <MessageSquare className="w-3 h-3" />
+                                        {commit.aiComments} Findings
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div className="flex items-center gap-4">
-                    {/* Risk Score Indicator */}
-                    <div className="text-right hidden sm:block">
-                        <div className="text-[10px] uppercase font-bold text-slate-400">Risk Score</div>
-                        <div className={`text-sm font-bold ${
-                            commit.riskScore > 50 ? "text-red-500" : commit.riskScore > 0 ? "text-yellow-500" : "text-green-500"
-                        }`}>
-                            {commit.riskScore}/100
+                    <div className="flex items-center gap-4">
+                        {/* Risk Score Indicator */}
+                        <div className="text-right hidden sm:block">
+                            <div className="text-[10px] uppercase font-bold text-slate-400">Risk Score</div>
+                            <div className={`text-sm font-bold ${
+                                commit.riskScore > 50 ? "text-red-500" : commit.riskScore > 0 ? "text-yellow-500" : "text-green-500"
+                            }`}>
+                                {commit.riskScore}/100
+                            </div>
                         </div>
+                        <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-brand-500 transition-colors" />
                     </div>
-                    <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-brand-500 transition-colors" />
                 </div>
-              </div>
-            ))}
+                ))
+            )}
           </div>
         </CardContent>
       </Card>

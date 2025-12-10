@@ -9,7 +9,10 @@
  */
 
 import type * as analytics from "../analytics.js";
+import type * as http from "../http.js";
 import type * as projects from "../projects.js";
+import type * as queries from "../queries.js";
+import type * as scheduler from "../scheduler.js";
 import type * as users from "../users.js";
 
 import type {
@@ -20,7 +23,10 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   analytics: typeof analytics;
+  http: typeof http;
   projects: typeof projects;
+  queries: typeof queries;
+  scheduler: typeof scheduler;
   users: typeof users;
 }>;
 

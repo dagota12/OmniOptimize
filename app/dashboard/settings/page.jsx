@@ -1,14 +1,19 @@
 "use client";
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useProject } from "@/app/_context/ProjectContext"; // <--- 1. Import Context
+
 import ProfileSettings from "./_components/ProfileSettings";
 import ApiKeys from "./_components/ApiKeys";
 import TeamSettings from "./_components/TeamSettings";
 import BillingSettings from "./_components/BillingSettings";
-import FeatureSettings from "./_components/FeatureSettings"; // New
-import IntegrationsSettings from "./_components/IntegrationsSettings"; // New
+import FeatureSettings from "./_components/FeatureSettings";
+import IntegrationsSettings from "./_components/IntegrationsSettings";
 
 export default function SettingsPage() {
+  // 2. Get the active project from the global context
+  const { activeProject } = useProject();
+
   return (
     <div className="space-y-6 mx-auto">
       <div>
@@ -18,7 +23,7 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="features" className="space-y-6">
+      <Tabs defaultValue="integrations" className="space-y-6">
         <div className="overflow-x-auto pb-2">
             <TabsList className="bg-slate-100 dark:bg-slate-900 p-1 border border-slate-200 dark:border-slate-800 inline-flex w-auto min-w-full md:min-w-0 justify-start">
             <TabsTrigger value="general">Profile</TabsTrigger>
@@ -42,8 +47,9 @@ export default function SettingsPage() {
           <FeatureSettings />
         </TabsContent>
 
+        {/* 3. Pass the Project ID to the Integrations Component */}
         <TabsContent value="integrations" className="space-y-4">
-            <IntegrationsSettings />
+            <IntegrationsSettings projectId={activeProject?._id} />
         </TabsContent>
         
         <TabsContent value="apikeys" className="space-y-4">
