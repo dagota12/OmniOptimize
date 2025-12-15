@@ -5,6 +5,7 @@ from pydantic import BaseModel
 import joblib
 import pandas as pd
 import uvicorn
+import os
 
 app = FastAPI()
 
@@ -81,4 +82,5 @@ def predict_seo(data: SeoData):
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
