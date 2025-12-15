@@ -23,6 +23,12 @@ import type { IPlugin } from "../types";
  */
 export interface ContainerOptions {
   /**
+   * RrWeb instance (REQUIRED for SessionSnapshotPlugin)
+   * Import: import * as rrweb from 'rrweb'
+   */
+  rrwebInstance?: any;
+
+  /**
    * Custom transmitters (if not provided, will use Fetch + Beacon)
    */
   transmitters?: ITransmitter[];
@@ -59,9 +65,13 @@ export class Container {
   private eventQueue: EventQueue;
   private tracker: Tracker;
   private pluginRegistry: PluginRegistry;
+  private rrwebInstance: any;
   private initialized = false;
 
   constructor(sdkConfig: SDKConfig, options?: ContainerOptions) {
+    // Store rrweb instance
+    this.rrwebInstance = options?.rrwebInstance;
+
     // Initialize Config
     this.config = new Config(sdkConfig);
 
@@ -102,7 +112,17 @@ export class Container {
     if (enableAutoTracking) {
       this.pluginRegistry.register(new PageViewPlugin());
       this.pluginRegistry.register(new ClickTrackingPlugin());
-      this.pluginRegistry.register(new SessionSnapshotPlugin());
+      
+      // SessionSnapshotPlugin requires rrweb instance
+      if (this.rrwebInstance) {
+        this.pluginRegistry.register(
+          new SessionSnapshotPlugin({ rrwebInstance: this.rrwebInstance })
+        );
+      } else if (this.config.isDebugEnabled()) {
+        console.warn(
+          "[Container] SessionSnapshotPlugin skipped: rrwebInstance not provided in options"
+        );
+      }
     }
 
     // Register custom plugins
