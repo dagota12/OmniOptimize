@@ -5,10 +5,19 @@ import { Sparkles, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const SolutionsHero = () => {
+  
+  // 1. Define the scroll function
+  const scrollToContent = () => {
+    const element = document.getElementById("use-cases");
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
     <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
       
-      {/* Background Pattern - subtle dots for a different feel than home */}
+      {/* Background Pattern */}
       <div className="absolute inset-0 w-full h-full bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] opacity-50 pointer-events-none" />
       
       {/* Gradient Overlay */}
@@ -49,7 +58,12 @@ const SolutionsHero = () => {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
         >
-            <Button variant="outline" className="rounded-full border-slate-300 dark:border-slate-700 text-slate-500 hover:text-slate-900 dark:hover:text-white">
+            {/* 2. Add the onClick handler here */}
+            <Button 
+                onClick={scrollToContent}
+                variant="outline" 
+                className="rounded-full border-slate-300 dark:border-slate-700 text-slate-500 hover:text-slate-900 dark:hover:text-white"
+            >
                 Explore Use Cases <ArrowDown className="w-4 h-4 ml-2" />
             </Button>
         </motion.div>

@@ -1,3 +1,5 @@
+// File: app/(HOME)/solutions/page.js
+
 import React from "react";
 import SolutionsHero from "./_components/SolutionsHero";
 import ProblemSolver from "./_components/ProblemSolver";
@@ -13,7 +15,12 @@ export default function SolutionsPage() {
   return (
     <main className="flex-1">
       <SolutionsHero />
-      <ProblemSolver />
+      
+      
+      <div id="use-cases" className="scroll-mt-20"> 
+        <ProblemSolver />
+      </div>
+
       <PersonaTabs />
       <SolutionsCTA />
     </main>
