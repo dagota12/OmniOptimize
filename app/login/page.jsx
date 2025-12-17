@@ -216,10 +216,10 @@ export default function AuthPage() {
 
                     <div className="grid grid-cols-2 gap-3">
                         <Button variant="outline" className="h-10 text-xs" onClick={() => handleOAuth("oauth_github")}>
-                            <Github className="mr-2 h-3 w-3" /> GitHub
+                            <Github className="mr-2 h-3 w-3" /> <span className="text-slate-950 dark:text-white">GitHub</span> 
                         </Button>
                         <Button variant="outline" className="h-10 text-xs" onClick={() => handleOAuth("oauth_google")}>
-                            <Chrome className="mr-2 h-3 w-3 text-red-500" /> Google
+                            <Chrome className="mr-2 h-3 w-3 text-green-500" /> <span className="text-slate-950 dark:text-white">Google</span>
                         </Button>
                     </div>
 
