@@ -14,7 +14,7 @@ import { FetchTransmitter, BeaconTransmitter } from "../transmitter";
 import { PluginRegistry } from "../plugins/PluginRegistry";
 import { PageViewPlugin } from "../plugins/page-view/PageViewPlugin";
 import { ClickTrackingPlugin } from "../plugins/click-tracking/ClickTrackingPlugin";
-import { SessionSnapshotPlugin } from "../plugins/session-snapshot/SessionSnapshotPlugin";
+import { ReplayPlugin } from "../plugins/replay/ReplayPlugin";
 import type { ITransmitter } from "../transmitter/ITransmitter";
 import type { IPlugin } from "../types";
 import * as rrweb from "rrweb";
@@ -115,14 +115,13 @@ export class Container {
       this.pluginRegistry.register(new PageViewPlugin());
       this.pluginRegistry.register(new ClickTrackingPlugin());
 
-      // SessionSnapshotPlugin requires rrweb instance
+      // ReplayPlugin requires rrweb instance
+      console.log("RRWEB INSTANCE IN CONTAINER", this.rrwebInstance);
       if (this.rrwebInstance) {
-        this.pluginRegistry.register(
-          new SessionSnapshotPlugin({ rrwebInstance: this.rrwebInstance })
-        );
+        this.pluginRegistry.register(new ReplayPlugin(this.rrwebInstance));
       } else if (this.config.isDebugEnabled()) {
         console.warn(
-          "[Container] SessionSnapshotPlugin skipped: rrwebInstance not provided in options"
+          "[Container] ReplayPlugin skipped: rrwebInstance not provided in options"
         );
       }
     }

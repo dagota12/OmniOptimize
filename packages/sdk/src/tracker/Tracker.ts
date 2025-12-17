@@ -208,6 +208,20 @@ export class Tracker {
   }
 
   /**
+   * Get config instance
+   */
+  getConfig(): Config {
+    return this.config;
+  }
+
+  /**
+   * Get session manager instance
+   */
+  getSessionManager(): SessionManager {
+    return this.sessionManager;
+  }
+
+  /**
    * Hash text using SHA256 (simple fallback to base64 hash)
    * In production, consider using a proper crypto library
    */
