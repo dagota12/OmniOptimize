@@ -13,6 +13,10 @@ const { tracker } = initializeSDK({
   debug: true,
   batchSize: 3,
   batchTimeout: 2000,
+  replay: {
+    enabled: true,
+    debug: true,
+  },
 });
 
 console.log("✅ SDK Initialized:", { tracker });

@@ -297,6 +297,7 @@ export class RrwebManager {
 export function transformRrwebEvent(
   rrwebEvent: any,
   sessionId: string,
+  replayId: string,
   clientId: string,
   userId: string | null | undefined,
   url: string,
@@ -305,6 +306,7 @@ export function transformRrwebEvent(
   type: "rrweb";
   timestamp: number;
   sessionId: string;
+  replayId: string;
   clientId: string;
   userId?: string | null;
   url: string;
@@ -316,6 +318,7 @@ export function transformRrwebEvent(
     type: "rrweb",
     timestamp: rrwebEvent.timestamp || Date.now(),
     sessionId,
+    replayId,
     clientId,
     userId: userId || undefined,
     url,

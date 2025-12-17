@@ -19,6 +19,9 @@ export class Config {
   private clientId: string;
   private userId: string | null;
   private replayId: string;
+  private replayConfig: any;
+  private sessionConfig: any;
+  private inactivityTimeoutMs: number;
 
   constructor(config: SDKConfig) {
     // Validate required fields
@@ -41,6 +44,9 @@ export class Config {
     this.clientId = config.clientId ?? this.loadOrCreateClientId();
     this.userId = config.userId ?? null;
     this.replayId = this.loadOrCreateReplayId();
+    this.replayConfig = config.replay ?? {};
+    this.sessionConfig = config.session ?? {};
+    this.inactivityTimeoutMs = config.session?.inactivityTimeoutMs ?? 1800000;
 
     if (this.debug) {
       console.log("[OmniSDK] Config initialized:", {
@@ -194,8 +200,7 @@ export class Config {
    * Get replay configuration
    */
   getReplayConfig(): any {
-    // Will be populated from SDKConfig.replay in future
-    return {};
+    return this.replayConfig;
   }
 
   /**
@@ -203,6 +208,6 @@ export class Config {
    * Default: 30 minutes (1800000 ms)
    */
   getInactivityTimeoutMs(): number {
-    return 1800000; // Will be configurable from SDKConfig.session?.inactivityTimeoutMs
+    return this.inactivityTimeoutMs;
   }
 }

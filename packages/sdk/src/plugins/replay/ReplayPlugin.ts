@@ -50,15 +50,15 @@ export class ReplayPlugin implements IPlugin {
     if (this.initialized) return;
 
     this.tracker = context.tracker;
-    const config = context.config || {};
-    const replayConfig = config.replay || {};
+    const config = context.config;
+    const replayConfig = config?.getReplayConfig?.() || {};
 
     // Check if replay is enabled
     this.enabled = replayConfig.enabled === true;
 
     if (!this.enabled) {
       this.initialized = true;
-      if (config.debug) {
+      if (config?.isDebugEnabled?.()) {
         console.log("[ReplayPlugin] Replay recording is disabled");
       }
       return;
@@ -150,12 +150,14 @@ export class ReplayPlugin implements IPlugin {
 
       const config = getConfig?.();
       const clientId = config?.getClientId?.() || "";
+      const replayId = config?.getReplayId?.() || "";
       const userId = config?.getUserId?.() || null;
 
       // Transform rrweb event to SDK format
       const sdkRrwebEvent: RrwebEvent = transformRrwebEvent(
         rrwebEvent,
         getSessionId?.() || "",
+        replayId,
         clientId,
         userId,
         window.location.href,

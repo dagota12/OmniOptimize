@@ -79,7 +79,8 @@ export interface SessionSnapshotEvent {
 export interface RrwebEvent {
   type: "rrweb";
   timestamp: number; // Event timestamp
-  sessionId: string;
+  sessionId: string; // Logical session (shared across tabs)
+  replayId: string; // Tab-scoped replay ID (unique per tab)
   clientId: string;
   userId?: string | null;
   url: string;
