@@ -3,10 +3,11 @@ import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Copy, Github, Check, AlertCircle } from "lucide-react";
+import { Copy, Github, Check, AlertCircle, Eye, EyeOff } from "lucide-react";
 
 const IntegrationsSettings = ({ projectId }) => {
   const [copied, setCopied] = useState(false);
+  const [isVisible, setIsVisible] = useState(false); // State for visibility toggle
   
   // Construct the Unique URL based on the passed prop
   const baseUrl = process.env.NEXT_PUBLIC_CONVEX_URL?.replace(".cloud", ".site") || "https://your-convex-url.site";
@@ -50,11 +51,31 @@ const IntegrationsSettings = ({ projectId }) => {
             </div>
             
             <div className="flex gap-2">
-                <Input 
-                    value={webhookUrl} 
-                    readOnly 
-                    className={`font-mono text-xs h-9 bg-white dark:bg-slate-950 ${!projectId ? "text-slate-400 italic" : ""}`} 
-                />
+                <div className="relative flex-1">
+                    <Input 
+                        // Only mask if there is a projectId AND isVisible is false
+                        type={!isVisible && projectId ? "password" : "text"}
+                        value={webhookUrl} 
+                        readOnly 
+                        className={`font-mono text-xs h-9 bg-white dark:bg-slate-950 pr-10 ${!projectId ? "text-slate-400 italic" : ""}`} 
+                    />
+                    
+                    {/* Visibility Toggle Button */}
+                    {projectId && (
+                        <button
+                            type="button"
+                            onClick={() => setIsVisible(!isVisible)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                        >
+                            {isVisible ? (
+                                <EyeOff className="w-4 h-4" />
+                            ) : (
+                                <Eye className="w-4 h-4" />
+                            )}
+                        </button>
+                    )}
+                </div>
+
                 <Button size="sm" variant="outline" onClick={handleCopy} disabled={!projectId}>
                     {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                 </Button>
