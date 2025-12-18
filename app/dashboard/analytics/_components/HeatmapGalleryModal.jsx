@@ -123,7 +123,7 @@ const HeatmapGalleryModal = ({ isOpen, onClose }) => {
                         <TabsTrigger value="mobile"><Smartphone className="w-4 h-4 mr-2"/> <span className="hidden sm:inline">Mob</span></TabsTrigger>
                     </TabsList>
                 </Tabs>
-                <Button variant="outline" className="hidden md:flex">Export</Button>
+                <Button variant="outline" className="hidden md:flex text-slate-900 dark:text-white">Export</Button>
             </div>
         </div>
 

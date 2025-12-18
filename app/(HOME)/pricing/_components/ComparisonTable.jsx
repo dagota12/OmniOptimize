@@ -46,10 +46,31 @@ const ComparisonTable = () => {
                             </tr>
                             {section.items.map((row, j) => (
                                 <tr key={j} className="border-b border-slate-200 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-900 transition-colors">
-                                    <td className="py-4 px-6 text-sm text-slate-700 dark:text-slate-300">{row.name}</td>
-                                    <td className="py-4 px-6 text-center text-sm text-slate-600 dark:text-slate-400 flex justify-center">{row.starter}</td>
-                                    <td className="py-4 px-6 text-center text-sm font-medium text-slate-900 dark:text-white">{row.pro}</td>
-                                    <td className="py-4 px-6 text-center text-sm text-slate-600 dark:text-slate-400">{row.business}</td>
+                                    {/* Name Column */}
+                                    <td className="py-4 px-6 text-sm text-slate-700 dark:text-slate-300">
+                                        {row.name}
+                                    </td>
+                                    
+                                    {/* Starter Column */}
+                                    <td className="py-4 px-6">
+                                        <div className="flex items-center justify-center text-sm text-slate-600 dark:text-slate-400">
+                                            {row.starter}
+                                        </div>
+                                    </td>
+
+                                    {/* Pro Column */}
+                                    <td className="py-4 px-6">
+                                        <div className="flex items-center justify-center text-sm font-medium text-slate-900 dark:text-white">
+                                            {row.pro}
+                                        </div>
+                                    </td>
+
+                                    {/* Business Column */}
+                                    <td className="py-4 px-6">
+                                        <div className="flex items-center justify-center text-sm text-slate-600 dark:text-slate-400">
+                                            {row.business}
+                                        </div>
+                                    </td>
                                 </tr>
                             ))}
                         </React.Fragment>
