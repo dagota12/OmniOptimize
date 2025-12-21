@@ -2,7 +2,14 @@ import "dotenv/config";
 import { Hono } from "hono";
 import { logger as honoLogger } from "hono/logger";
 import { cors } from "hono/cors";
-import { ingestHandler, healthHandler } from "./routes";
+import {
+  ingestHandler,
+  healthHandler,
+  getSessionHandler,
+  getReplayHandler,
+  getHeatmapHandler,
+  listHeatmapsHandler,
+} from "./routes";
 import { createIngestionQueue } from "./queue";
 import { checkDbConnection } from "./db/client";
 import { startWorker } from "./worker";
@@ -79,9 +86,20 @@ app.get("/", (c) => {
     endpoints: {
       health: "GET /health",
       ingest: "POST /ingest",
+      sessions: "GET /sessions/:sessionId",
+      replays: "GET /replays/:replayId",
+      heatmaps: "GET /heatmaps/:projectId/:url",
     },
   });
 });
+
+// Session Replay Routes
+app.get("/sessions/:sessionId", getSessionHandler);
+app.get("/replays/:replayId", getReplayHandler);
+
+// Heatmap Routes
+app.get("/heatmaps/:projectId/:url", getHeatmapHandler);
+app.get("/heatmaps/:projectId", listHeatmapsHandler);
 
 // Start server
 const port = parseInt(process.env.PORT || "3000", 10);
