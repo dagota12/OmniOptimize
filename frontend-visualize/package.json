@@ -18,12 +18,14 @@
     "axios": "^1.6.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
+    "echarts": "^6.0.0",
     "heatmap.js": "^2.0.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.20.0",
     "rrweb-player": "^1.0.0-alpha.4",
     "tailwind-merge": "^2.2.0",
+    "visual-heatmap": "^2.2.0",
     "zustand": "^4.4.0"
   },
   "devDependencies": {

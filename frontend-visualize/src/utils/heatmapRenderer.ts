@@ -132,7 +132,7 @@ export function renderHeatmapToCanvas(
   ctx.strokeStyle = "#ccc";
   ctx.lineWidth = 1;
   ctx.font = "12px sans-serif";
-  ctx.fillStyle = "#666";
+  ctx.fillStyle = "#66768";
 
   // X axis
   ctx.beginPath();

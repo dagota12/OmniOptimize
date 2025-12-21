@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Session, Replay } from "@/types";
+import { Session } from "@/types";
 
 interface SessionStore {
   selectedSessionId: string;

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { HeatmapPage } from "@/pages/HeatmapPage";
 import { SessionReplayPage } from "@/pages/SessionReplayPage";
+import { HeatmapTestPage } from "@/pages/HeatmapTestPage";
 import { Button } from "@/components/ui/button";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,11 @@ export function App() {
                   <Link to="/replays">
                     <Button variant="outline">Replays</Button>
                   </Link>
+                  <Link to="/test">
+                    <Button variant="outline" size="sm">
+                      Test
+                    </Button>
+                  </Link>
                 </nav>
               </div>
             </div>
@@ -38,6 +44,7 @@ export function App() {
             <Routes>
               <Route path="/" element={<HeatmapPage />} />
               <Route path="/replays" element={<SessionReplayPage />} />
+              <Route path="/test" element={<HeatmapTestPage />} />
             </Routes>
           </main>
 
