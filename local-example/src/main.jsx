@@ -9,7 +9,7 @@ import "./index.css";
 // Initialize SDK once at app startup
 const { tracker } = initializeSDK({
   projectId: "local-example-app",
-  endpoint: "http://localhost:3000/api/events",
+  endpoint: "http://localhost:5000/ingest",
   debug: true,
   batchSize: 3,
   batchTimeout: 2000,
