@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "omni-sdk/**"
+  workflow_dispatch:
 env:
   NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
