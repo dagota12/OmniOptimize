@@ -1,6 +1,7 @@
 import { db } from "../db/client";
 import { sessions, events, heatmapClicks } from "../db/schema";
 import { eq, count, min, max } from "drizzle-orm";
+import { eventRepository } from "./EventRepository";
 
 export class SessionRepository {
   /**
@@ -107,7 +108,7 @@ export class SessionRepository {
   /**
    * Get sessions with stats for a project
    * Includes event counts and rage clicks
-   * Rage clicks = multiple clicks by same user on same element in short time span
+   * Rage clicks = per-user sequences of ≥5 clicks on same URL within 500ms windows
    */
   async getSessionsWithStats(projectId: string) {
     try {
@@ -135,31 +136,25 @@ export class SessionRepository {
         eventCounts.map((e) => [e.sessionId, e.count])
       );
 
-      // Get rage click counts per session
-      // Rage clicks = clicks at same grid position with count >= 3 (indicating user frustration)
-      // Only count one rage click per grid position per session (not per click)
-      const rageClicks = await db
-        .select({
-          sessionId: heatmapClicks.sessionId,
-        })
-        .from(heatmapClicks)
-        .where(eq(heatmapClicks.projectId, projectId));
-      // Filter for clusters where count >= 3 (indicates multiple clicks at same spot)
-      // .where(({ count }) => count >= 3);
+      // Get rage click counts per session using window function analysis
+      const rageClickCounts = new Map<string, number>();
 
-      const rageClickMap = new Map<string, number>();
-      for (const rage of rageClicks) {
-        rageClickMap.set(
-          rage.sessionId,
-          (rageClickMap.get(rage.sessionId) || 0) + 1
+      for (const session of projectSessions) {
+        const rageClickCount = await eventRepository.getRageClickCountBySession(
+          session.id,
+          3,
+          600 // ms threshold
         );
+        if (rageClickCount > 0) {
+          rageClickCounts.set(session.id, rageClickCount);
+        }
       }
 
       // Enrich sessions with stats
       return projectSessions.map((session) => ({
         ...session,
         eventsCount: eventCountMap.get(session.id) || 0,
-        rageClicks: rageClickMap.get(session.id) || 0,
+        rageClicks: rageClickCounts.get(session.id) || 0,
       }));
     } catch (error) {
       console.error("Error getting sessions with stats:", error);

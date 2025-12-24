@@ -1,6 +1,6 @@
 import { db } from "../db/client";
 import { events } from "../db/schema";
-import { eq, count, inArray } from "drizzle-orm";
+import { eq, count, inArray, sql } from "drizzle-orm";
 
 export class EventRepository {
   /**
@@ -108,6 +108,155 @@ export class EventRepository {
       return new Map(result.map((r) => [r.sessionId, r.count]));
     } catch (error) {
       console.error("Error getting event counts:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Detect rage clicks per session
+   * A rage click sequence = ≥5 clicks by same user (clientId) on same URL within 500ms windows
+   * Returns count of distinct rage-click sequences per session
+   *
+   * @param sessionId - Session to analyze
+   * @param minClicks - Minimum clicks in sequence to count as rage (default: 5)
+   * @param thresholdMs - Time window for consecutive clicks (default: 500ms)
+   */
+  async getRageClickCountBySession(
+    sessionId: string,
+    minClicks: number = 5,
+    thresholdMs: number = 500
+  ): Promise<number> {
+    try {
+      // Raw SQL query using window functions to detect rage-click sequences
+      const result = await db.execute(sql`
+        WITH ordered_clicks AS (
+          SELECT
+            id,
+            client_id,
+            session_id,
+            url,
+            timestamp,
+            EXTRACT(EPOCH FROM (
+              timestamp - LAG(timestamp) OVER (
+                PARTITION BY client_id, session_id, url
+                ORDER BY timestamp
+              )
+            )) * 1000 AS diff_ms
+          FROM events
+          WHERE type = 'click' AND session_id = ${sessionId}
+        ),
+        click_groups AS (
+          SELECT
+            *,
+            SUM(
+              CASE
+                WHEN diff_ms IS NULL OR diff_ms > ${thresholdMs}
+                THEN 1 ELSE 0
+              END
+            ) OVER (
+              PARTITION BY client_id, session_id, url
+              ORDER BY timestamp
+            ) AS sequence_id
+          FROM ordered_clicks
+        ),
+        rage_sequences AS (
+          SELECT
+            client_id,
+            session_id,
+            url,
+            sequence_id,
+            COUNT(*) AS click_count
+          FROM click_groups
+          GROUP BY client_id, session_id, url, sequence_id
+          HAVING COUNT(*) >= ${minClicks}
+        )
+        SELECT COUNT(*) as rage_click_count FROM rage_sequences
+      `);
+
+      const rageCount = result.rows[0]?.rage_click_count || 0;
+      return Number(rageCount);
+    } catch (error) {
+      console.error("Error detecting rage clicks:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get rage click sequences for a session (detailed info)
+   * Returns each rage-click sequence with user, URL, click count, timing
+   */
+  async getRageClickSequencesBySession(
+    sessionId: string,
+    minClicks: number = 5,
+    thresholdMs: number = 500
+  ): Promise<
+    Array<{
+      clientId: string;
+      url: string;
+      clickCount: number;
+      startedAt: Date;
+      endedAt: Date;
+    }>
+  > {
+    try {
+      const result = await db.execute(sql`
+        WITH ordered_clicks AS (
+          SELECT
+            id,
+            client_id,
+            session_id,
+            url,
+            timestamp,
+            EXTRACT(EPOCH FROM (
+              timestamp - LAG(timestamp) OVER (
+                PARTITION BY client_id, session_id, url
+                ORDER BY timestamp
+              )
+            )) * 1000 AS diff_ms
+          FROM events
+          WHERE type = 'click' AND session_id = ${sessionId}
+        ),
+        click_groups AS (
+          SELECT
+            *,
+            SUM(
+              CASE
+                WHEN diff_ms IS NULL OR diff_ms > ${thresholdMs}
+                THEN 1 ELSE 0
+              END
+            ) OVER (
+              PARTITION BY client_id, session_id, url
+              ORDER BY timestamp
+            ) AS sequence_id
+          FROM ordered_clicks
+        ),
+        rage_sequences AS (
+          SELECT
+            client_id,
+            session_id,
+            url,
+            sequence_id,
+            COUNT(*) AS click_count,
+            MIN(timestamp) AS started_at,
+            MAX(timestamp) AS ended_at
+          FROM click_groups
+          GROUP BY client_id, session_id, url, sequence_id
+          HAVING COUNT(*) >= ${minClicks}
+        )
+        SELECT client_id, url, click_count, started_at, ended_at
+        FROM rage_sequences
+        ORDER BY started_at
+      `);
+
+      return (result.rows || []).map((row: any) => ({
+        clientId: row.client_id,
+        url: row.url,
+        clickCount: row.click_count,
+        startedAt: new Date(row.started_at),
+        endedAt: new Date(row.ended_at),
+      }));
+    } catch (error) {
+      console.error("Error getting rage click sequences:", error);
       throw error;
     }
   }
