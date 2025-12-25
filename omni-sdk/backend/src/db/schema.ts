@@ -137,18 +137,20 @@ export const users = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => ({
-    // Unique constraint: one entry per (projectId, distinctId)
-    uniqueProjectDistinct: unique("users_project_distinct_id_key").on(
-      table.projectId,
-      table.distinctId
-    ),
-    // Index for cohort queries: find all users who first appeared on a given date
-    projectFirstSeenIdx: index("users_project_first_seen_idx").on(
-      table.projectId,
-      table.firstSeenAt
-    ),
-  })
+  (table) => [
+    {
+      // Unique constraint: one entry per (projectId, distinctId)
+      uniqueProjectDistinct: unique("users_project_distinct_id_key").on(
+        table.projectId,
+        table.distinctId
+      ),
+      // Index for cohort queries: find all users who first appeared on a given date
+      projectFirstSeenIdx: index("users_project_first_seen_idx").on(
+        table.projectId,
+        table.firstSeenAt
+      ),
+    },
+  ]
 );
 
 /**
@@ -180,24 +182,26 @@ export const userDailyActivity = pgTable(
       .defaultNow()
       .notNull(), // timestamp of most recent event that day
   },
-  (table) => ({
-    // Composite primary key: one row per (projectId, distinctId, activityDate)
-    pk: unique("user_daily_activity_pk").on(
-      table.projectId,
-      table.distinctId,
-      table.activityDate
-    ),
-    // Index for day-N retention queries: find all activity on a specific date for a project
-    projectActivityDateIdx: index("user_daily_activity_project_date_idx").on(
-      table.projectId,
-      table.activityDate
-    ),
-    // Index for user-centric queries: find all activity dates for a specific user
-    projectDistinctIdx: index("user_daily_activity_project_distinct_idx").on(
-      table.projectId,
-      table.distinctId
-    ),
-  })
+  (table) => [
+    {
+      // Composite primary key: one row per (projectId, distinctId, activityDate)
+      pk: unique("user_daily_activity_pk").on(
+        table.projectId,
+        table.distinctId,
+        table.activityDate
+      ),
+      // Index for day-N retention queries: find all activity on a specific date for a project
+      projectActivityDateIdx: index("user_daily_activity_project_date_idx").on(
+        table.projectId,
+        table.activityDate
+      ),
+      // Index for user-centric queries: find all activity dates for a specific user
+      projectDistinctIdx: index("user_daily_activity_project_distinct_idx").on(
+        table.projectId,
+        table.distinctId
+      ),
+    },
+  ]
 );
 
 // Relations (optional, not used in this phase but good for type safety)

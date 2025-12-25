@@ -1,5 +1,9 @@
 import { Hono } from "hono";
 import { retentionRepository } from "../repositories";
+import {
+  retentionQuerySchema,
+  retentionResponseSchema,
+} from "../schemas/retention";
 
 /**
  * Retention Analytics Route
@@ -47,58 +51,31 @@ export const retentionRouter = new Hono();
  */
 retentionRouter.get("/retention", async (c) => {
   try {
-    // Parse query parameters
-    const projectId = c.req.query("projectId");
-    const startDate = c.req.query("startDate");
-    const endDate = c.req.query("endDate");
-    const intervalsParam = c.req.query("intervals") || "0,1,3,7,14,30";
+    // Extract and validate query parameters
+    const queryParams = {
+      projectId: c.req.query("projectId"),
+      startDate: c.req.query("startDate"),
+      endDate: c.req.query("endDate"),
+      intervals: c.req.query("intervals"),
+    };
 
-    // Validate required parameters
-    if (!projectId || !startDate || !endDate) {
+    // Parse and validate with Zod
+    const parsedQuery = retentionQuerySchema.safeParse(queryParams);
+
+    if (!parsedQuery.success) {
       return c.json(
         {
-          error: "Missing required parameters: projectId, startDate, endDate",
+          error: "Validation failed",
+          details: parsedQuery.error.errors.map((e) => ({
+            path: e.path.join("."),
+            message: e.message,
+          })),
         },
         400
       );
     }
 
-    // Validate date format (ISO 8601)
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(startDate) || !dateRegex.test(endDate)) {
-      return c.json(
-        {
-          error: "Invalid date format. Use ISO 8601 (YYYY-MM-DD)",
-        },
-        400
-      );
-    }
-
-    // Validate date range
-    if (startDate > endDate) {
-      return c.json(
-        {
-          error: "startDate must be <= endDate",
-        },
-        400
-      );
-    }
-
-    // Parse intervals
-    const intervals = intervalsParam
-      .split(",")
-      .map((i) => parseInt(i.trim(), 10))
-      .filter((i) => !isNaN(i) && i >= 0);
-
-    if (intervals.length === 0) {
-      return c.json(
-        {
-          error:
-            "Invalid intervals: must be comma-separated non-negative integers",
-        },
-        400
-      );
-    }
+    const { projectId, startDate, endDate, intervals } = parsedQuery.data;
 
     // Fetch retention data
     const cohortData = await retentionRepository.getRetentionCohorts(
@@ -122,7 +99,7 @@ retentionRouter.get("/retention", async (c) => {
         const retainedCount = cohort.retention[interval] || 0;
         const pct =
           cohort.size > 0
-            ? parseFloat((retainedCount / cohort.size).toFixed(4))
+            ? parseFloat((retainedCount / cohort.size).toFixed(2))
             : 0;
         retentionPercentages[interval] = pct;
       }
@@ -134,12 +111,24 @@ retentionRouter.get("/retention", async (c) => {
       };
     });
 
-    return c.json(
-      {
-        cohorts,
-      },
-      200
-    );
+    // Validate response shape with Zod
+    const response = { cohorts };
+    const validatedResponse = retentionResponseSchema.safeParse(response);
+
+    if (!validatedResponse.success) {
+      console.error(
+        "[RetentionRoute] Response validation failed:",
+        validatedResponse.error
+      );
+      return c.json(
+        {
+          error: "Internal server error: invalid response shape",
+        },
+        500
+      );
+    }
+
+    return c.json(validatedResponse.data, 200);
   } catch (error) {
     console.error("[RetentionRoute] Error fetching retention data:", error);
     return c.json(
