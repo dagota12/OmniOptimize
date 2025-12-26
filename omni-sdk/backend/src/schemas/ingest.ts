@@ -1,43 +1,39 @@
-import { z } from "@hono/zod-openapi";
+import { z } from "zod";
 
 /**
- * Request schemas for ingestion
+ * Ingest request schemas
+ * Single source of truth for batch validation
  */
 
 const DimensionsSchema = z.object({
-  w: z.number().int().positive().openapi({ example: 1920 }),
-  h: z.number().int().positive().openapi({ example: 1080 }),
+  w: z.number().int().positive(),
+  h: z.number().int().positive(),
 });
 
 const RrwebPayloadSchema = z.object({
-  type: z.number().openapi({ example: 0 }),
-  data: z.record(z.any()).openapi({ example: {} }),
-  timestamp: z.number().optional().openapi({ example: 1704067200000 }),
+  type: z.number(),
+  data: z.record(z.any()),
+  timestamp: z.number().optional(),
 });
 
 const BaseEventSchema = z.object({
-  eventId: z
-    .string()
-    .uuid()
-    .openapi({ example: "123e4567-e89b-12d3-a456-426614174000" }),
-  projectId: z.string().min(1).openapi({ example: "proj_123" }),
-  clientId: z.string().min(1).openapi({ example: "client_456" }),
-  sessionId: z.string().min(1).openapi({ example: "session_789" }),
-  userId: z.string().nullable().openapi({ example: "user_001" }),
-  type: z
-    .enum([
-      "pageview",
-      "click",
-      "input",
-      "route",
-      "custom",
-      "session_snapshot",
-      "rrweb",
-    ])
-    .openapi({ example: "pageview" }),
-  timestamp: z.number().openapi({ example: 1704067200000 }),
-  url: z.string().url().openapi({ example: "https://example.com/page" }),
-  referrer: z.string().openapi({ example: "https://google.com" }),
+  eventId: z.string().uuid(),
+  projectId: z.string().min(1),
+  clientId: z.string().min(1),
+  sessionId: z.string().min(1),
+  userId: z.string().nullable(),
+  type: z.enum([
+    "pageview",
+    "click",
+    "input",
+    "route",
+    "custom",
+    "session_snapshot",
+    "rrweb",
+  ]),
+  timestamp: z.number(),
+  url: z.string().url(),
+  referrer: z.string(),
   pageDimensions: DimensionsSchema,
   viewport: DimensionsSchema,
   properties: z.record(z.any()).optional(),
@@ -45,25 +41,22 @@ const BaseEventSchema = z.object({
 
 const RrwebEventSchema = BaseEventSchema.extend({
   type: z.literal("rrweb"),
-  replayId: z.string().min(1).openapi({ example: "replay_123" }),
+  replayId: z.string().min(1),
   rrwebPayload: RrwebPayloadSchema,
-  schemaVersion: z.string().openapi({ example: "1.0.0" }),
+  schemaVersion: z.string(),
 });
 
 const ClickEventSchema = BaseEventSchema.extend({
   type: z.literal("click"),
-  pageX: z.number().openapi({ example: 500 }),
-  pageY: z.number().openapi({ example: 300 }),
-  xNorm: z.number().min(0).max(1).openapi({ example: 0.26 }),
-  yNorm: z.number().min(0).max(1).openapi({ example: 0.28 }),
-  selector: z.string().min(1).openapi({ example: "button.primary" }),
-  tagName: z.string().min(1).openapi({ example: "button" }),
+  pageX: z.number(),
+  pageY: z.number(),
+  xNorm: z.number().min(0).max(1),
+  yNorm: z.number().min(0).max(1),
+  selector: z.string().min(1),
+  tagName: z.string().min(1),
   elementTextHash: z.string().optional(),
   xpath: z.string().optional(),
-  screenClass: z
-    .enum(["mobile", "tablet", "desktop"])
-    .optional()
-    .openapi({ example: "desktop" }),
+  screenClass: z.enum(["mobile", "tablet", "desktop"]).optional(),
   layoutHash: z.string().optional(),
 });
 
@@ -73,34 +66,32 @@ const EventSchema = z.union([
   BaseEventSchema,
 ]);
 
+/**
+ * Request schema for batch ingestion
+ */
 export const BatchSchema = z.object({
-  batchId: z.string().min(1).openapi({ example: "batch_001" }),
-  timestamp: z.number().openapi({ example: 1704067200000 }),
-  events: z.array(EventSchema).min(1),
-});
-
-export const IngestRequestSchema = z.object({
   batchId: z.string().min(1),
   timestamp: z.number(),
   events: z.array(EventSchema).min(1),
 });
 
 /**
- * Response schemas for ingestion
+ * Response schemas
  */
-
 export const IngestSuccessResponseSchema = z.object({
-  success: z.literal(true).openapi({ example: true }),
-  message: z.string().openapi({ example: "Batch accepted for processing" }),
-  batchId: z.string().openapi({ example: "batch_001" }),
-  jobId: z.string().openapi({ example: "job_123" }),
+  success: z.boolean(),
+  message: z.string(),
+  batchId: z.string(),
+  jobId: z.string(),
 });
 
 export const IngestErrorResponseSchema = z.object({
-  error: z
-    .string()
-    .openapi({ example: "Validation error: events must have at least 1 item" }),
+  error: z.string(),
 });
 
+/**
+ * Type exports for handler implementations
+ */
+export type IngestRequest = z.infer<typeof BatchSchema>;
 export type IngestSuccessResponse = z.infer<typeof IngestSuccessResponseSchema>;
 export type IngestErrorResponse = z.infer<typeof IngestErrorResponseSchema>;

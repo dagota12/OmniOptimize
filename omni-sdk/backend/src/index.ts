@@ -5,18 +5,7 @@ import { cors } from "hono/cors";
 import { openAPIRouteHandler } from "hono-openapi";
 import { swaggerUI } from "@hono/swagger-ui";
 import { createHealthRouter } from "./routes/health";
-import {
-  ingestHandler,
-  getSessionHandler,
-  getReplayHandler,
-  getProjectSessionsHandler,
-  getHeatmapHandler,
-  listHeatmapsHandler,
-  retentionRouter,
-  trafficRouter,
-  overviewRouter,
-  topPagesRouter,
-} from "./routes";
+import { createIngestRouter } from "./routes/ingest";
 import { createIngestionQueue } from "./queue";
 import { checkDbConnection } from "./db/client";
 import { startWorker } from "./worker";
@@ -118,27 +107,7 @@ async function initialize() {
   });
 
   // Ingest route
-  app.post("/ingest", async (c) => {
-    if (!queue) {
-      return c.json({ error: "Queue not initialized" }, 503);
-    }
-    return ingestHandler(c, queue);
-  });
-
-  // Session Replay Routes
-  app.get("/sessions/:sessionId", getSessionHandler);
-  app.get("/replays/:replayId", getReplayHandler);
-  app.get("/projects/:projectId/sessions", getProjectSessionsHandler);
-
-  // Heatmap Routes
-  app.get("/heatmaps/:projectId/:url", getHeatmapHandler);
-  app.get("/heatmaps/:projectId", listHeatmapsHandler);
-
-  // Analytics Routes
-  app.route("/analytics", retentionRouter);
-  app.route("/analytics/traffic", trafficRouter);
-  app.route("/analytics/overview", overviewRouter);
-  app.route("/analytics/top-pages", topPagesRouter);
+  app.route("/ingest", createIngestRouter(queue));
 
   console.log("✓ Backend initialized");
 }
