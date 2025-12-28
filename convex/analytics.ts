@@ -124,3 +124,34 @@ export const getOverview = action({
     return response;
   },
 });
+
+export const getTrafficData = action({
+  args: {
+    projectId: v.string(),
+    startDate: v.string(),
+    endDate: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Unauthorized");
+    }
+
+    const backendUrl = process.env.BACKEND_URL;
+    const backendApiKey = process.env.BACKEND_API_KEY;
+
+    if (!backendUrl || !backendApiKey) {
+      throw new Error("Backend configuration missing");
+    }
+
+    const params = new URLSearchParams({
+      projectId: args.projectId,
+      startDate: args.startDate,
+      endDate: args.endDate,
+    });
+
+    const response = await analyticsFetch(`/analytics/traffic?${params}`);
+
+    return response;
+  },
+});
