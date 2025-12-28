@@ -1,7 +1,8 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Play,
   MousePointerClick,
@@ -13,39 +14,9 @@ import {
   MapPin,
   ArrowDown,
 } from "lucide-react";
-
-const SESSIONS = [
-  {
-    id: 1,
-    user: "User_8x92",
-    location: "Ethiopia",
-    device: "Mobile",
-    duration: "4m 12s",
-    events: 24,
-    rageClicks: 2,
-    status: "Abandoned",
-  },
-  {
-    id: 2,
-    user: "User_33a1",
-    location: "USA",
-    device: "Desktop",
-    duration: "12m 05s",
-    events: 112,
-    rageClicks: 0,
-    status: "Purchased",
-  },
-  {
-    id: 3,
-    user: "User_99b2",
-    location: "UK",
-    device: "Desktop",
-    duration: "0m 45s",
-    events: 5,
-    rageClicks: 0,
-    status: "Bounced",
-  },
-];
+import { formatDurationMs, truncateClientId } from "@/utils/formatters";
+import { SkeletonPulse } from "@/components/skeleton/dashboardSkeletons";
+import ErrorState from "@/components/ErrorState";
 
 const TIMELINE_EVENTS = [
   { time: "00:05", type: "navigate", label: "Landed on /home", icon: Layout },
@@ -120,60 +91,149 @@ const SessionPlayer = () => (
   </div>
 );
 
-export const SessionReplayTab = () => {
+// Skeleton for session card list
+const SessionCardSkeleton = () => (
+  <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+    <CardContent className="p-3">
+      <div className="space-y-3">
+        <div className="flex justify-between items-start">
+          <SkeletonPulse className="h-4 w-24" />
+          <SkeletonPulse className="h-5 w-12 rounded" />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <SkeletonPulse className="h-3 w-16" />
+          <SkeletonPulse className="h-3 w-16" />
+          <SkeletonPulse className="h-3 w-20" />
+          <SkeletonPulse className="h-3 w-16" />
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+// Normalize device string
+const normalizeDevice = (device) => {
+  if (!device) return "Unknown";
+  return device.charAt(0).toUpperCase() + device.slice(1).toLowerCase();
+};
+
+export const SessionReplayTab = ({
+  sessions = [],
+  loading = false,
+  error = null,
+  onSessionSelect = () => {},
+}) => {
+  const [selectedSessionId, setSelectedSessionId] = useState(null);
+
+  if (error) {
+    return (
+      <ErrorState
+        title="Unable to load sessions"
+        message={error}
+        showRefresh={false}
+      />
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-3 flex flex-col gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <SessionCardSkeleton key={i} />
+          ))}
+        </div>
+        <div className="lg:col-span-6 flex flex-col gap-4">
+          <SkeletonPulse className="h-[450px] w-full rounded-xl" />
+          <div className="grid grid-cols-3 gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <SkeletonPulse key={i} className="h-16 w-full rounded-lg" />
+            ))}
+          </div>
+        </div>
+        <div className="lg:col-span-3 flex flex-col gap-4">
+          <SkeletonPulse className="h-[450px] w-full rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!sessions || sessions.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-[400px] text-center">
+        <div>
+          <div className="text-slate-400 dark:text-slate-500 mb-2">
+            <AlertCircle className="w-12 h-12 mx-auto opacity-50" />
+          </div>
+          <h3 className="text-slate-700 dark:text-slate-300 font-semibold mb-1">
+            No sessions available
+          </h3>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">
+            Sessions will appear here when users interact with your site.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const selectedSession = selectedSessionId
+    ? sessions.find((s) => s.id === selectedSessionId)
+    : sessions[0];
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-auto lg:h-full">
-      {/* LEFT: Session List (3 cols) */}
-      <div className="lg:col-span-3 flex flex-col gap-4 overflow-y-auto lg:pr-2 h-[200px] lg:h-auto border-b lg:border-b-0 border-slate-200 dark:border-slate-800 pb-4 lg:pb-0">
-        {SESSIONS.map((session, i) => (
-          <Card
-            key={i}
-            className={`cursor-pointer transition-all shrink-0 bg-white dark:bg-slate-900 ${
-              i === 0
-                ? "border-brand-500 ring-1 ring-brand-500/20 dark:ring-brand-500/40 shadow-sm"
-                : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
-            }`}
-          >
-            <CardContent className="p-3">
-              <div className="flex justify-between items-start mb-2">
-                <span className="font-bold text-sm text-slate-900 dark:text-white">
-                  {session.user}
-                </span>
-                <span
-                  className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                    session.status === "Purchased"
-                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                      : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
-                  }`}
-                >
-                  {session.status}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400">
-                <span className="flex items-center gap-1 truncate">
-                  <Clock className="w-3 h-3 shrink-0" /> {session.duration}
-                </span>
-                <span className="flex items-center gap-1 truncate">
-                  <MapPin className="w-3 h-3 shrink-0" /> {session.location}
-                </span>
-                <span className="flex items-center gap-1 truncate">
-                  {session.device === "Mobile" ? (
-                    <Smartphone className="w-3 h-3 shrink-0" />
-                  ) : (
-                    <Monitor className="w-3 h-3 shrink-0" />
-                  )}{" "}
-                  {session.device}
-                </span>
-                {session.rageClicks > 0 && (
-                  <span className="text-red-600 dark:text-red-400 font-bold flex items-center gap-1 truncate">
-                    <AlertCircle className="w-3 h-3 shrink-0" />{" "}
-                    {session.rageClicks} Rage
-                  </span>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      {/* LEFT: Session List (3 cols) with ScrollArea */}
+      <div className="lg:col-span-3 border-b lg:border-b-0 border-slate-200 dark:border-slate-800 flex flex-col h-[200px] lg:h-auto">
+        <ScrollArea className="h-full max-h-[500px] w-full rounded-lg border border-slate-200 dark:border-slate-800">
+          <div className="space-y-4 p-4">
+            {sessions.map((session) => (
+              <Card
+                key={session.id}
+                onClick={() => {
+                  setSelectedSessionId(session.id);
+                  onSessionSelect(session.id);
+                }}
+                className={`cursor-pointer transition-all shrink-0 bg-white dark:bg-slate-900 ${
+                  session.id === selectedSession?.id
+                    ? "border-green-500 ring-1 ring-green-500/20 dark:ring-green-500/40 shadow-sm"
+                    : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
+                }`}
+              >
+                <CardContent className="p-3">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                      {truncateClientId(session.clientId)}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400">
+                    <span className="flex items-center gap-1 truncate">
+                      <Clock className="w-3 h-3 shrink-0" />
+                      {formatDurationMs(session.duration)}
+                    </span>
+                    <span className="flex items-center gap-1 truncate">
+                      <MapPin className="w-3 h-3 shrink-0" />
+                      {session.location || "—"}
+                    </span>
+                    <span className="flex items-center gap-1 truncate">
+                      {normalizeDevice(session.device) === "Mobile" ? (
+                        <Smartphone className="w-3 h-3 shrink-0" />
+                      ) : (
+                        <Monitor className="w-3 h-3 shrink-0" />
+                      )}
+                      {normalizeDevice(session.device)}
+                    </span>
+                    {session.rageClicks > 0 && (
+                      <span className="text-red-600 dark:text-red-400 font-bold flex items-center gap-1 truncate">
+                        <AlertCircle className="w-3 h-3 shrink-0" />
+                        {session.rageClicks} Rage
+                      </span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </ScrollArea>
       </div>
 
       {/* MIDDLE: Player (6 cols) */}
@@ -182,19 +242,22 @@ export const SessionReplayTab = () => {
         <div className="grid grid-cols-3 gap-4">
           {[
             {
-              label: "Clicks",
-              value: "24",
+              label: "Events",
+              value: selectedSession?.eventsCount || "0",
               color: "text-slate-900 dark:text-white",
             },
             {
-              label: "Pages",
-              value: "4",
+              label: "Duration",
+              value: formatDurationMs(selectedSession?.duration || 0),
               color: "text-slate-900 dark:text-white",
             },
             {
-              label: "Errors",
-              value: "1",
-              color: "text-red-600 dark:text-red-400",
+              label: "Rage Clicks",
+              value: selectedSession?.rageClicks || "0",
+              color:
+                selectedSession?.rageClicks > 0
+                  ? "text-red-600 dark:text-red-400"
+                  : "text-slate-900 dark:text-white",
             },
           ].map((stat, i) => (
             <div

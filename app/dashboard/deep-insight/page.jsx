@@ -1,15 +1,19 @@
 "use client";
-import React from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
 import { Fingerprint } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 // Import tab components from shared location
 import { SessionReplayTab } from "@/app/dashboard/_components/insights/SessionReplayTab";
 import { FunnelTab } from "@/app/dashboard/_components/insights/FunnelTab";
 import { CohortTab } from "@/app/dashboard/_components/insights/CohortTab";
 import { SearchTab } from "@/app/dashboard/_components/insights/SearchTab";
+
+// Project context
+import { useProject } from "@/app/_context/ProjectContext";
 
 const DEFAULT_TAB = "behavior";
 
@@ -19,6 +23,42 @@ export default function DeepInsightPage() {
     "deepInsight_activeTab",
     DEFAULT_TAB
   );
+
+  // Project context
+  const { activeProject } = useProject();
+
+  // Sessions state
+  const [sessions, setSessions] = useState([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
+  const [sessionsError, setSessionsError] = useState(null);
+
+  // Get sessions action
+  const getSessions = useAction(api.analytics.getSessions);
+
+  // Fetch sessions on component mount and when project changes
+  useEffect(() => {
+    if (!activeProject || !isLoaded) {
+      return;
+    }
+
+    const fetchSessions = async () => {
+      setLoadingSessions(true);
+      setSessionsError(null);
+      try {
+        const response = await getSessions({
+          projectId: activeProject._id,
+        });
+        setSessions(response.sessions || []);
+      } catch (err) {
+        console.error("Error fetching sessions:", err);
+        setSessionsError(err?.message || "Failed to load sessions");
+      } finally {
+        setLoadingSessions(false);
+      }
+    };
+
+    fetchSessions();
+  }, [activeProject, isLoaded, getSessions]);
 
   if (!isLoaded) {
     return null; // Prevent hydration mismatch
@@ -90,7 +130,11 @@ export default function DeepInsightPage() {
           {/* SCROLLABLE CONTENT BODY */}
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50 dark:bg-[#020617]">
             <TabsContent value="behavior" className="mt-0 h-full">
-              <SessionReplayTab />
+              <SessionReplayTab
+                sessions={sessions}
+                loading={loadingSessions}
+                error={sessionsError}
+              />
             </TabsContent>
             <TabsContent value="funnels" className="mt-0 h-full">
               <FunnelTab />

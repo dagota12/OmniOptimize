@@ -229,3 +229,28 @@ export const getTopPages = action({
     return response;
   },
 });
+
+// Sessions: GET /sessions/projects/{projectId}
+export const getSessions = action({
+  args: {
+    projectId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Unauthorized");
+    }
+
+    // Verify user has access to this project
+    await ctx.runQuery(internal.analytics.verifyProjectAccess, {
+      clerkId: identity.subject,
+      projectId: args.projectId,
+    });
+
+    // Call backend API
+    const response = await analyticsFetch(
+      `/sessions/projects/${args.projectId}`
+    );
+    return response;
+  },
+});

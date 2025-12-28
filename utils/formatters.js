@@ -31,6 +31,25 @@ export function formatDurationSeconds(seconds) {
   return `${mins}m ${secs}s`;
 }
 
+export function formatDurationMs(milliseconds) {
+  if (!milliseconds || milliseconds < 1) return "0s";
+
+  const totalSeconds = Math.floor(milliseconds / 1000);
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = Math.floor(totalSeconds % 60);
+
+  if (mins === 0) return `${secs}s`;
+  return `${mins}m ${secs}s`;
+}
+
+export function truncateClientId(clientId) {
+  if (!clientId || clientId.length <= 11) return clientId;
+  
+  const first8 = clientId.slice(0, 8);
+  const last3 = clientId.slice(-3);
+  return `${first8}...${last3}`;
+}
+
 export function getTrend(changePct, inverted = false) {
   if (changePct === 0) return "neutral";
 
