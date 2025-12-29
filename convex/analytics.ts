@@ -254,3 +254,27 @@ export const getSessions = action({
     return response;
   },
 });
+
+// Get Single Session: GET /sessions/{sessionId}
+export const getSessionById = action({
+  args: {
+    projectId: v.string(),
+    sessionId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Unauthorized");
+    }
+
+    // Verify user has access to this project
+    await ctx.runQuery(internal.analytics.verifyProjectAccess, {
+      clerkId: identity.subject,
+      projectId: args.projectId,
+    });
+
+    // Call backend API
+    const response = await analyticsFetch(`/sessions/${args.sessionId}`);
+    return response;
+  },
+});

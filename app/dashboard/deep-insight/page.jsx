@@ -32,8 +32,14 @@ export default function DeepInsightPage() {
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [sessionsError, setSessionsError] = useState(null);
 
+  // Session details state
+  const [sessionDetails, setSessionDetails] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [detailsError, setDetailsError] = useState(null);
+
   // Get sessions action
   const getSessions = useAction(api.analytics.getSessions);
+  const getSessionById = useAction(api.analytics.getSessionById);
 
   // Fetch sessions on component mount and when project changes
   useEffect(() => {
@@ -59,6 +65,26 @@ export default function DeepInsightPage() {
 
     fetchSessions();
   }, [activeProject, isLoaded, getSessions]);
+
+  // Handle session selection and fetch details
+  const handleSessionSelect = async (sessionId) => {
+    if (!activeProject) return;
+
+    try {
+      setLoadingDetails(true);
+      setDetailsError(null);
+      const response = await getSessionById({
+        projectId: activeProject._id,
+        sessionId,
+      });
+      setSessionDetails(response);
+    } catch (err) {
+      console.error("Error fetching session details:", err);
+      setDetailsError(err?.message || "Failed to load session details");
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
 
   if (!isLoaded) {
     return null; // Prevent hydration mismatch
@@ -134,6 +160,10 @@ export default function DeepInsightPage() {
                 sessions={sessions}
                 loading={loadingSessions}
                 error={sessionsError}
+                sessionDetails={sessionDetails}
+                loadingDetails={loadingDetails}
+                detailsError={detailsError}
+                onSessionSelect={handleSessionSelect}
               />
             </TabsContent>
             <TabsContent value="funnels" className="mt-0 h-full">
