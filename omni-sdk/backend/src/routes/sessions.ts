@@ -84,8 +84,22 @@ export function createSessionsRouter() {
           (result.statusCode || 400) as 400 | 404
         );
       }
+      // Serialize once
+      const json = JSON.stringify(result.data);
 
-      return c.json(result.data, 200);
+      // Gzip
+      const gzipped = Bun.gzipSync(json);
+
+      return new Response(gzipped, {
+        status: result.statusCode,
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Encoding": "gzip",
+          "Cache-Control": "no-store",
+        },
+      });
+
+      //return c.json(result.data, 200);
     }
   );
 

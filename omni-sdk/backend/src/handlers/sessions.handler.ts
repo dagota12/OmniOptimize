@@ -71,6 +71,12 @@ export async function getSessionHandler(sessionId: string) {
 }
 
 /**
+ * helper function for fetching replays by session
+ *
+ */
+
+
+/**
  * Replay handler - fetch a specific replay (single tab session)
  */
 export async function getReplayHandler(replayId: string) {
