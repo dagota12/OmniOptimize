@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Copy, Check, Eye, EyeOff } from "lucide-react";
 
 /**
- * Reusable copyable field component
+ * Reusable copyable field componentt
  * Handles copy feedback and optional password masking
  * Single source of truth for copy logic - eliminates repeated useState calls
  */
