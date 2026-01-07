@@ -1,0 +1,52 @@
+# Omni Analytics SDK
+
+**Zero-instrumentation website analytics. Initialize once. Works automatically.**
+
+Omni Analytics is a drop-in SDK for modern web applications. Forget manual event tracking—just initialize it and it automatically captures page views, clicks, user sessions, and navigation events. No dashboards, no complexity, no awkward moment when you realize you forgot to instrument a page.
+
+## What it does
+
+After a single `initializeSDK()` call, Omni Analytics automatically tracks:
+
+- **Page views** — every navigation or route change
+- **Clicks** — element selectors, coordinates, and element info
+- **Sessions** — automatic user sessions (anonymous by default)
+- **SPA navigation** — client-side routing (Next.js, React Router, etc.)
+
+No event API calls. No instrumentation scattered through your code. It works.
+
+## Why use it
+
+- **One-line setup** — call `initializeSDK()` and you're done
+- **Zero manual work** — automatic tracking handles most use cases
+- **Modern frameworks** — built for React, Next.js, and SPAs
+- **Simple API** — when you do need custom events, it's straightforward
+
+## Quick start
+
+```ts
+import { initializeSDK } from "@omni-analytics/sdk";
+
+initializeSDK({
+  projectId: "<projectid>",
+  endpoint: "https://omnioptimize-vdvv.onrender.com/ingest",
+  batchSize: 30,
+  batchTimeout: 2000,
+  replay: {
+    enabled: true,
+  },
+});
+```
+
+That's it. Events are now being collected.
+
+> you can get your project id from the settings page.
+
+## Next steps
+
+- **[Getting Started](docs/getting-started)** — installation and first setup
+- **[Automatic Tracking](docs/tracking)** — what Omni Analytics captures by default
+
+---
+
+> **Status:** Omni Analytics is in **active beta**. Core features are stable, but APIs may evolve as we gather feedback.
