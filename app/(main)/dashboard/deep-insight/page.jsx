@@ -21,7 +21,7 @@ export default function DeepInsightPage() {
   // Use localStorage to persist tab selection
   const [activeTab, setActiveTab, isLoaded] = useLocalStorage(
     "deepInsight_activeTab",
-    DEFAULT_TAB
+    DEFAULT_TAB,
   );
 
   // Project context

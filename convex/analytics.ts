@@ -11,7 +11,7 @@ import { internal } from "./_generated/api";
 async function analyticsFetch(
   url: string,
   method: "GET" | "POST" = "GET",
-  options: RequestInit = {}
+  options: RequestInit = {},
 ) {
   const backendUrl = process.env.BACKEND_URL;
   const backendApiKey = process.env.BACKEND_API_KEY;
@@ -249,7 +249,7 @@ export const getSessions = action({
 
     // Call backend API
     const response = await analyticsFetch(
-      `/sessions/projects/${args.projectId}`
+      `/sessions/projects/${args.projectId}`,
     );
     return response;
   },
@@ -313,7 +313,7 @@ export const addHeatmapPage = mutation({
 
     // Check if page already exists
     const pageExists = (project.pages || []).some(
-      (p: any) => p.route === args.route
+      (p: any) => p.route === args.route,
     );
     if (pageExists) {
       throw new Error("Page already exists for this route");
@@ -354,9 +354,42 @@ export const fetchHeatmapData = action({
 
     // Call analytics backend to fetch heatmap data
     const response = await analyticsFetch(
-      `/heatmaps/${args.projectId}/${encodeURIComponent(args.fullUrl)}`
+      `/heatmaps/${args.projectId}/${encodeURIComponent(args.fullUrl)}`,
     );
 
+    return response;
+  },
+});
+
+// Retention Cohorts: GET /analytics/retention
+export const getRetentionCohorts = action({
+  args: {
+    projectId: v.string(),
+    startDate: v.string(),
+    endDate: v.string(),
+    intervals: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Unauthorized");
+    }
+
+    // Verify user has access to this project
+    await ctx.runQuery(internal.analytics.verifyProjectAccess, {
+      clerkId: identity.subject,
+      projectId: args.projectId,
+    });
+
+    // Call analytics backend to fetch retention cohort data
+    const params = new URLSearchParams({
+      projectId: args.projectId,
+      startDate: args.startDate,
+      endDate: args.endDate,
+      intervals: args.intervals,
+    });
+
+    const response = await analyticsFetch(`/analytics/retention?${params}`);
     return response;
   },
 });
