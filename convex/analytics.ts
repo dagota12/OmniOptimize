@@ -337,6 +337,53 @@ export const addHeatmapPage = mutation({
   },
 });
 
+export const updateHeatmapPage = mutation({
+  args: {
+    projectId: v.id("projects"),
+    index: v.number(),
+    fullUrl: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    await ctx.runQuery(internal.analytics.verifyProjectAccess, {
+      clerkId: identity.subject,
+      projectId: args.projectId,
+    });
+
+    const project = await ctx.db.get(args.projectId);
+    if (!project) throw new Error("Project not found");
+
+    const pages = project.pages || [];
+    if (args.index < 0 || args.index >= pages.length) {
+      throw new Error("Invalid page index");
+    }
+
+    // Derive route from full URL
+    let route = "/";
+    try {
+      const urlObj = new URL(args.fullUrl);
+      route = urlObj.pathname || "/";
+    } catch (e) {
+      throw new Error("Invalid URL");
+    }
+
+    const updated = {
+      ...pages[args.index],
+      route,
+      fullUrl: args.fullUrl,
+      isDefault: route === "/",
+    };
+    const updatedPages = pages.map((p: any, i: number) =>
+      i === args.index ? updated : p,
+    );
+
+    await ctx.db.patch(args.projectId, { pages: updatedPages });
+    return updatedPages;
+  },
+});
+
 export const fetchHeatmapData = action({
   args: {
     projectId: v.id("projects"),

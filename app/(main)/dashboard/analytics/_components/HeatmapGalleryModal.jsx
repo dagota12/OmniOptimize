@@ -40,8 +40,9 @@ const HeatmapGalleryModal = ({ isOpen, onClose, projectId }) => {
   const [selectedPageIndex, setSelectedPageIndex] = useState(0);
   const [device, setDevice] = useState("desktop");
   const [showAddPageInput, setShowAddPageInput] = useState(false);
-  const [newPageRoute, setNewPageRoute] = useState("");
   const [newPageUrl, setNewPageUrl] = useState("");
+  const [editIndex, setEditIndex] = useState(null);
+  const [editUrl, setEditUrl] = useState("");
   const [backgroundImage, setBackgroundImage] = useState(null);
   const fileInputRef = React.useRef(null);
 
@@ -52,6 +53,7 @@ const HeatmapGalleryModal = ({ isOpen, onClose, projectId }) => {
 
   // Mutations
   const addPage = useMutation(api.analytics.addHeatmapPage);
+  const updatePage = useMutation(api.analytics.updateHeatmapPage);
   const fetchHeatmapData = useAction(api.analytics.fetchHeatmapData);
 
   const [heatmapData, setHeatmapData] = useState(null);
@@ -81,19 +83,41 @@ const HeatmapGalleryModal = ({ isOpen, onClose, projectId }) => {
   }, [selectedPage, projectId, fetchHeatmapData]);
 
   const handleAddPage = async () => {
-    if (!newPageRoute || !newPageUrl) return;
+    if (!newPageUrl) return;
 
     try {
-      await addPage({
-        projectId,
-        route: newPageRoute,
-        fullUrl: newPageUrl,
-      });
-      setNewPageRoute("");
+      const urlObj = new URL(newPageUrl);
+      const route = urlObj.pathname || "/";
+      await addPage({ projectId, route, fullUrl: newPageUrl });
       setNewPageUrl("");
       setShowAddPageInput(false);
     } catch (err) {
-      alert("Failed to add page: " + err.message);
+      toast.error(
+        err.message === "Invalid URL"
+          ? "Please enter a valid URL"
+          : `Failed to add page: ${err.message}`,
+      );
+    }
+  };
+
+  const startEditPage = (idx) => {
+    setEditIndex(idx);
+    setEditUrl(pages[idx].fullUrl || "");
+  };
+
+  const cancelEdit = () => {
+    setEditIndex(null);
+    setEditUrl("");
+  };
+
+  const saveEdit = async () => {
+    if (editIndex === null) return;
+    try {
+      await updatePage({ projectId, index: editIndex, fullUrl: editUrl });
+      cancelEdit();
+      toast.success("Page updated");
+    } catch (err) {
+      toast.error(err.message || "Failed to update page");
     }
   };
 
@@ -136,7 +160,7 @@ const HeatmapGalleryModal = ({ isOpen, onClose, projectId }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[100vw] w-full h-[100dvh] md:h-[90vh] md:max-w-[95vw] md:w-[1400px] p-0 overflow-hidden bg-slate-50 dark:bg-[#020617] border-0 md:border md:border-slate-200 dark:md:border-slate-800 flex flex-col md:rounded-xl">
+      <DialogContent className="max-w-[100vw] w-full h-[100dvh] md:h-[90vh] md:max-w-[95vw] md:w-[1400px] p-0 overflow-hidden bg-slate-50 dark:bg-[#020617] border-0 md:border md:border-slate-200 dark:md:border-slate-800 flex flex-col md:rounded-xl text-foreground">
         {/* HEADER */}
         <div className="px-4 py-3 md:px-6 md:py-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shrink-0 z-20">
           <div className="flex flex-col md:flex-row md:items-center gap-4 w-full md:w-auto">
@@ -264,35 +288,74 @@ const HeatmapGalleryModal = ({ isOpen, onClose, projectId }) => {
             <ScrollArea className="flex-1">
               <div className="p-3 space-y-2">
                 {pages.map((page, idx) => (
-                  <button
+                  <div
                     key={idx}
-                    onClick={() => setSelectedPageIndex(idx)}
-                    className={`w-full text-left p-3 rounded-xl transition-all border ${
+                    onDoubleClick={() => startEditPage(idx)}
+                    className={`w-full text-left p-3 rounded-xl transition-all border cursor-pointer ${
                       selectedPageIndex === idx
                         ? "bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-700 shadow-sm"
                         : "border-transparent hover:bg-slate-50 dark:hover:bg-slate-900/50"
                     }`}
+                    onClick={() => setSelectedPageIndex(idx)}
                   >
-                    <div className="flex justify-between items-start mb-1">
-                      <span
-                        className={`font-semibold text-sm ${
-                          selectedPageIndex === idx
-                            ? "text-slate-900 dark:text-white"
-                            : "text-slate-600 dark:text-slate-400"
-                        }`}
-                      >
-                        {page.route}
-                      </span>
-                      {page.isDefault && (
-                        <Badge variant="secondary" className="text-[10px] h-5">
-                          Default
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-500 truncate">
-                      {page.fullUrl}
-                    </p>
-                  </button>
+                    {editIndex === idx ? (
+                      <div className="space-y-2">
+                        <Input
+                          autoFocus
+                          value={editUrl}
+                          onChange={(e) => setEditUrl(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") saveEdit();
+                            if (e.key === "Escape") cancelEdit();
+                          }}
+                          onBlur={cancelEdit}
+                          placeholder="https://example.com/products"
+                          className="text-sm"
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onMouseDown={saveEdit}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onMouseDown={cancelEdit}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex justify-between items-start mb-1">
+                          <span
+                            className={`font-semibold text-sm ${
+                              selectedPageIndex === idx
+                                ? "text-slate-900 dark:text-white"
+                                : "text-slate-600 dark:text-slate-400"
+                            }`}
+                          >
+                            {page.route}
+                          </span>
+                          {page.isDefault && (
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] h-5"
+                            >
+                              Default
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 truncate">
+                          {page.fullUrl}
+                        </p>
+                      </>
+                    )}
+                  </div>
                 ))}
               </div>
             </ScrollArea>
@@ -332,17 +395,6 @@ const HeatmapGalleryModal = ({ isOpen, onClose, projectId }) => {
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                    Route
-                  </label>
-                  <Input
-                    placeholder="/products"
-                    value={newPageRoute}
-                    onChange={(e) => setNewPageRoute(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                     Full URL
                   </label>
                   <Input
@@ -358,7 +410,6 @@ const HeatmapGalleryModal = ({ isOpen, onClose, projectId }) => {
                     className="flex-1"
                     onClick={() => {
                       setShowAddPageInput(false);
-                      setNewPageRoute("");
                       setNewPageUrl("");
                     }}
                   >
@@ -367,7 +418,7 @@ const HeatmapGalleryModal = ({ isOpen, onClose, projectId }) => {
                   <Button
                     className="flex-1"
                     onClick={handleAddPage}
-                    disabled={!newPageRoute || !newPageUrl}
+                    disabled={!newPageUrl}
                   >
                     Add Page
                   </Button>

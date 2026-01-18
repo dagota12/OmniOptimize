@@ -13,7 +13,7 @@ export const RetentionTab = ({ projectId }) => {
 
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [intervals, setIntervals] = useState("0,1,3,7,14,30");
+  const [intervals, setIntervals] = useState("0,1,2,3,7,14,30");
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Initialize from URL or set defaults

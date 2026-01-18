@@ -55,7 +55,7 @@ export const CohortCell = ({ value, size = 60 }) => {
         height: `${size}px`,
         backgroundColor: bgColor,
       }}
-      className={`border border-slate-200 dark:border-slate-700 text-center font-semibold text-sm transition-colors hover:opacity-75 ${textColor}`}
+      className={`border-none text-center font-semibold text-sm transition-colors hover:opacity-75 ${textColor}`}
     >
       <span>{percentage}%</span>
     </td>

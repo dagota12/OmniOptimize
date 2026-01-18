@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const AVAILABLE_INTERVALS = ["0", "1", "3", "7", "14", "30"];
+const AVAILABLE_INTERVALS = ["0", "1", "2", "3", "7", "14", "30"];
 
 export const CohortFilters = ({
   startDate,
@@ -67,7 +67,7 @@ export const CohortFilters = ({
 
     const newStart = thirtyDaysAgo.toISOString().split("T")[0];
     const newEnd = now.toISOString().split("T")[0];
-    const defaultIntervals = "0,1,3,7,14,30";
+    const defaultIntervals = "0,1,2,3,7,14,30";
 
     setDateRange({
       from: parseISO(newStart),

@@ -30,7 +30,6 @@ const HeatmapCanvas = ({ data, page, device, backgroundImage }) => {
 
     // Create heatmap container
     const heatmapWrapper = document.createElement("div");
-    heatmapWrapper.style.position = "absolute";
     heatmapWrapper.style.top = "0";
     heatmapWrapper.style.left = "0";
     heatmapWrapper.style.width = `${imageWidth}px`;
@@ -56,6 +55,9 @@ const HeatmapCanvas = ({ data, page, device, backgroundImage }) => {
         1.0: "#ff0000",
       },
     });
+
+    // Force position back to absolute (heatmap.js resets it to relative)
+    heatmapContainerRef.current.style.position = "absolute";
 
     // Convert backend grid data to heatmap.js format with scaling applied
     const maxCount = Math.max(...data.grid.map((cell) => cell.count), 1);

@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { CohortCell } from "./CohortCell";
+import { formatDateDisplay } from "@/utils/dateFormatter";
 
 export const CohortTable = ({ cohorts, intervals }) => {
   if (cohorts.length === 0) {
@@ -42,7 +43,7 @@ export const CohortTable = ({ cohorts, intervals }) => {
               className="hover:bg-slate-50 dark:hover:bg-slate-900/50"
             >
               <td className="border border-slate-200 dark:border-slate-700 px-4 py-3 font-medium text-sm text-slate-900 dark:text-slate-100">
-                {new Date(cohort.date).toLocaleDateString()}
+                {formatDateDisplay(cohort.date)}
               </td>
               <td className="border border-slate-200 dark:border-slate-700 px-4 py-3 text-center text-sm text-slate-600 dark:text-slate-400">
                 {cohort.size}
