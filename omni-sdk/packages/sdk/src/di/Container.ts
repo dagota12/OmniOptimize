@@ -118,13 +118,12 @@ export class Container {
       this.pluginRegistry.register(new ClickTrackingPlugin());
 
       // ReplayPlugin requires rrweb instance
-      console.log("RRWEB INSTANCE IN CONTAINER", this.rrwebInstance);
       if (this.rrwebInstance) {
         this.pluginRegistry.register(new ReplayPlugin(this.rrwebInstance));
-      } else if (this.config.isDebugEnabled()) {
-        console.warn(
-          "[Container] ReplayPlugin skipped: rrwebInstance not provided in options",
-        );
+      } else {
+        this.config
+          .getLogger()
+          .warn("ReplayPlugin skipped: rrwebInstance not provided in options");
       }
     }
 
@@ -135,9 +134,7 @@ export class Container {
       }
     }
 
-    if (this.config.isDebugEnabled()) {
-      console.log("[Container] SDK initialized with all dependencies");
-    }
+    this.config.getLogger().debug("SDK initialized with all dependencies");
   }
 
   /**
@@ -164,17 +161,15 @@ export class Container {
             }
           : undefined,
       });
-    } else if (this.config.isDebugEnabled()) {
-      console.log(
-        "[Container] SDK is disabled, skipping plugin initialization",
-      );
+    } else {
+      this.config
+        .getLogger()
+        .debug("SDK is disabled, skipping plugin initialization");
     }
 
     this.initialized = true;
 
-    if (this.config.isDebugEnabled()) {
-      console.log("[Container] All plugins initialized");
-    }
+    this.config.getLogger().debug("All plugins initialized");
   }
 
   /**
@@ -234,12 +229,12 @@ export class Container {
   disable(): void {
     this.config.setEnabled(false);
     this.pluginRegistry.pauseAll().catch((error) => {
-      console.error("[Container] Error pausing plugins during disable:", error);
+      this.config
+        .getLogger()
+        .error("Error pausing plugins during disable:", error);
     });
 
-    if (this.config.isDebugEnabled()) {
-      console.log("[OmniSDK] SDK disabled");
-    }
+    this.config.getLogger().debug("SDK disabled");
   }
 
   /**
@@ -258,34 +253,28 @@ export class Container {
         .initialize({
           tracker: this.tracker,
           config: this.config,
-          logger: this.config.isDebugEnabled()
-            ? {
-                debug: (msg, data) => console.log(`[OmniSDK] ${msg}`, data),
-                info: (msg, data) => console.info(`[OmniSDK] ${msg}`, data),
-                warn: (msg, data) => console.warn(`[OmniSDK] ${msg}`, data),
-                error: (msg, err) => console.error(`[OmniSDK] ${msg}`, err),
-              }
-            : undefined,
+          logger: {
+            debug: (msg, data) => this.config.getLogger().debug(msg, data),
+            info: (msg, data) => this.config.getLogger().info(msg, data),
+            warn: (msg, data) => this.config.getLogger().warn(msg, data),
+            error: (msg, err) => this.config.getLogger().error(msg, err),
+          },
         })
         .catch((error) => {
-          console.error(
-            "[Container] Error initializing plugins during enable:",
-            error,
-          );
+          this.config
+            .getLogger()
+            .error("Error initializing plugins during enable:", error);
         });
     } else {
       // Plugins were already initialized but paused, resume them
       this.pluginRegistry.resumeAll().catch((error) => {
-        console.error(
-          "[Container] Error resuming plugins during enable:",
-          error,
-        );
+        this.config
+          .getLogger()
+          .error("Error resuming plugins during enable:", error);
       });
     }
 
-    if (this.config.isDebugEnabled()) {
-      console.log("[OmniSDK] SDK enabled");
-    }
+    this.config.getLogger().debug("SDK enabled");
   }
 
   /**
@@ -297,8 +286,6 @@ export class Container {
     this.sessionManager.clearSession();
     this.initialized = false;
 
-    if (this.config.isDebugEnabled()) {
-      console.log("[Container] SDK destroyed");
-    }
+    this.config.getLogger().debug("SDK destroyed");
   }
 }

@@ -1,5 +1,6 @@
 import type { SDKConfig } from "../types/config";
 import { generateUUID } from "../utils";
+import { Logger, type ILogger } from "../utils/Logger";
 
 /**
  * Config Manager
@@ -23,6 +24,7 @@ export class Config {
   private sessionConfig: any;
   private inactivityTimeoutMs: number;
   private enabled: boolean;
+  private logger: ILogger;
 
   constructor(config: SDKConfig) {
     // Validate required fields
@@ -50,15 +52,16 @@ export class Config {
     this.sessionConfig = config.session ?? {};
     this.inactivityTimeoutMs = config.session?.inactivityTimeoutMs ?? 1800000;
 
-    if (this.debug) {
-      console.log("[OmniSDK] Config initialized:", {
-        projectId: this.projectId,
-        endpoint: this.endpoint,
-        batchSize: this.batchSize,
-        batchTimeout: this.batchTimeout,
-        enabled: this.enabled,
-      });
-    }
+    // Initialize logger
+    this.logger = new Logger(this.debug, "[OmniSDK]");
+
+    this.logger.debug("Config initialized:", {
+      projectId: this.projectId,
+      endpoint: this.endpoint,
+      batchSize: this.batchSize,
+      batchTimeout: this.batchTimeout,
+      enabled: this.enabled,
+    });
   }
 
   /**
@@ -226,5 +229,12 @@ export class Config {
    */
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
+  }
+
+  /**
+   * Get logger instance
+   */
+  getLogger(): ILogger {
+    return this.logger;
   }
 }

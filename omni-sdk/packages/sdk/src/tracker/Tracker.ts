@@ -172,7 +172,7 @@ export class Tracker {
    */
   track(event: BaseEvent | Event): void {
     if (this.config.isDebugEnabled()) {
-      console.log("[Tracker] Tracking event:", event);
+      // console.log("[Tracker] Tracking event:", event);
     }
 
     this.eventQueue.add(event as Event);
@@ -290,7 +290,7 @@ export class Tracker {
    */
   trackRrweb(rrwebEvent: RrwebEvent): void {
     if (this.config.isDebugEnabled()) {
-      console.log("[Tracker] Tracking rrweb event:", rrwebEvent);
+      // console.log("[Tracker] Tracking rrweb event:", rrwebEvent);
     }
 
     const event: Event = {
