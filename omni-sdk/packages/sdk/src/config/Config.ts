@@ -22,6 +22,7 @@ export class Config {
   private replayConfig: any;
   private sessionConfig: any;
   private inactivityTimeoutMs: number;
+  private enabled: boolean;
 
   constructor(config: SDKConfig) {
     // Validate required fields
@@ -41,6 +42,7 @@ export class Config {
     this.clientIdStorageKey = "omni_client_id"; // Browser-wide persistence key
     this.replayIdStorageKey = "omni_replay_id"; // Tab-scoped (sessionStorage)
     this.captureErrors = config.captureErrors ?? false;
+    this.enabled = config.enabled ?? true;
     this.clientId = config.clientId ?? this.loadOrCreateClientId();
     this.userId = config.userId ?? null;
     this.replayId = this.loadOrCreateReplayId();
@@ -54,6 +56,7 @@ export class Config {
         endpoint: this.endpoint,
         batchSize: this.batchSize,
         batchTimeout: this.batchTimeout,
+        enabled: this.enabled,
       });
     }
   }
@@ -209,5 +212,19 @@ export class Config {
    */
   getInactivityTimeoutMs(): number {
     return this.inactivityTimeoutMs;
+  }
+
+  /**
+   * Check if SDK is enabled
+   */
+  isEnabled(): boolean {
+    return this.enabled;
+  }
+
+  /**
+   * Set SDK enabled state
+   */
+  setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
   }
 }

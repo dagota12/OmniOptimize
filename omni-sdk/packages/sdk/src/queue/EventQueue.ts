@@ -7,6 +7,7 @@
 
 import type { Event, Batch } from "../types";
 import type { ITransmitter } from "../transmitter/ITransmitter";
+import type { Config } from "../config/Config";
 import { generateUUID } from "../utils";
 
 export class EventQueue {
@@ -17,27 +18,36 @@ export class EventQueue {
   private readonly batchTimeout: number;
   private readonly transmitters: ITransmitter[];
   private readonly onFlush?: (batch: Batch) => Promise<void>;
+  private readonly config: Config;
   private isProcessing = false;
 
   constructor(
     transmitters: ITransmitter[],
     batchSize: number = 50,
     batchTimeout: number = 10000,
-    onFlush?: (batch: Batch) => Promise<void>
+    onFlush?: (batch: Batch) => Promise<void>,
+    config?: Config,
   ) {
     this.transmitters = transmitters.sort(
-      (a, b) => (b.getPriority?.() ?? 0) - (a.getPriority?.() ?? 0)
+      (a, b) => (b.getPriority?.() ?? 0) - (a.getPriority?.() ?? 0),
     );
     this.batchSize = batchSize;
     this.batchTimeout = batchTimeout;
     this.onFlush = onFlush;
+    this.config = config as Config;
     this.batchId = this.generateBatchId();
   }
 
   /**
    * Add an event to the queue
+   * Discards event if SDK is disabled
    */
   add(event: Event): void {
+    // Discard if SDK is disabled
+    if (this.config && !this.config.isEnabled()) {
+      return;
+    }
+
     this.events.push(event);
 
     // Flush if batch size reached

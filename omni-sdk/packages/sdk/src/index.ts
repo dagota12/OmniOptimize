@@ -66,6 +66,32 @@ export async function destroySDK() {
   }
 }
 
+/**
+ * Disable the SDK globally
+ * Stops all event tracking and pauses all plugins
+ * Fire-and-forget operation
+ */
+export function disableSDK(): void {
+  if (!globalContainer) {
+    console.warn("[OmniSDK] SDK not initialized. Call initializeSDK first.");
+    return;
+  }
+  globalContainer.disable();
+}
+
+/**
+ * Enable the SDK globally
+ * Resumes all event tracking and resumes all plugins
+ * Fire-and-forget operation
+ */
+export function enableSDK(): void {
+  if (!globalContainer) {
+    console.warn("[OmniSDK] SDK not initialized. Call initializeSDK first.");
+    return;
+  }
+  globalContainer.enable();
+}
+
 // Export all public types and classes
 export * from "./types";
 export { Container } from "./di/Container";

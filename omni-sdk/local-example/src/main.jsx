@@ -1,13 +1,14 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { initializeSDK, destroySDK } from "@omni-analytics/sdk";
+import { initializeSDK, disableSDK, enableSDK, destroySDK } from "@omni-analytics/sdk";
 import { TrackerProvider } from "@omni-analytics/react";
 import App from "./App";
 import "./index.css";
 
 // Initialize SDK once at app startup
 const { tracker } = initializeSDK({
+  enabled: false,
   projectId: "local-example-app",
   endpoint: "http://localhost:5000/ingest",
   debug: true,
@@ -18,7 +19,7 @@ const { tracker } = initializeSDK({
     debug: true,
   },
 });
-
+setTimeout(enableSDK, 10000);
 console.log("✅ SDK Initialized:", { tracker });
 
 ReactDOM.createRoot(document.getElementById("root")).render(

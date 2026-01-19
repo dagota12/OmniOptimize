@@ -33,7 +33,7 @@ export class Tracker {
   constructor(
     config: Config,
     sessionManager: SessionManager,
-    eventQueue: EventQueue
+    eventQueue: EventQueue,
   ) {
     this.config = config;
     this.sessionManager = sessionManager;
@@ -48,6 +48,10 @@ export class Tracker {
     route?: string;
     isInitialLoad?: boolean;
   }): void {
+    if (!this.config.isEnabled()) {
+      return;
+    }
+
     const pageContext = getPageContext();
     const { pageDimensions, viewport } = getPageDimensions();
 
@@ -77,8 +81,12 @@ export class Tracker {
    */
   trackClick(
     element: Element,
-    coordinates?: { pageX?: number; pageY?: number }
+    coordinates?: { pageX?: number; pageY?: number },
   ): void {
+    if (!this.config.isEnabled()) {
+      return;
+    }
+
     const pageContext = getPageContext();
     const { pageDimensions, viewport } = getPageDimensions();
 
@@ -91,10 +99,8 @@ export class Tracker {
     // Compute heatmap fields: normalized coordinates
     const pageX = coordinates?.pageX ?? 0;
     const pageY = coordinates?.pageY ?? 0;
-    const xNorm =
-      pageDimensions.w > 0 ? (pageX + window.scrollX) / pageDimensions.w : 0;
-    const yNorm =
-      pageDimensions.h > 0 ? (pageY + window.scrollY) / pageDimensions.h : 0;
+    const xNorm = pageDimensions.w > 0 ? pageX / pageDimensions.w : 0;
+    const yNorm = pageDimensions.h > 0 ? pageY / pageDimensions.h : 0;
 
     // Get screen classification for responsive heatmap grouping
     const screenClass: ScreenClass = getScreenClass(window.innerWidth);
@@ -135,6 +141,10 @@ export class Tracker {
    * Track a custom event
    */
   trackCustom(eventName: string, properties?: Record<string, any>): void {
+    if (!this.config.isEnabled()) {
+      return;
+    }
+
     const pageContext = getPageContext();
     const { pageDimensions, viewport } = getPageDimensions();
 

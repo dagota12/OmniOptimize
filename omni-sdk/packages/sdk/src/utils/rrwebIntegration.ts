@@ -85,13 +85,13 @@ export class RrwebManager {
   constructor(rrwebInstance: RrwebLibrary) {
     if (!rrwebInstance) {
       throw new Error(
-        "[RrwebManager] rrweb is REQUIRED. Install: npm install @omni-analytics/sdk"
+        "[RrwebManager] rrweb is REQUIRED. Install: npm install @omni-analytics/sdk",
       );
     }
 
     if (!rrwebInstance.record || typeof rrwebInstance.record !== "function") {
       throw new Error(
-        "[RrwebManager] Invalid rrweb instance. Ensure rrweb is properly imported."
+        "[RrwebManager] Invalid instance. Ensure rrweb is properly imported.",
       );
     }
 
@@ -186,6 +186,24 @@ export class RrwebManager {
    */
   public isRecording(): boolean {
     return this.recording;
+  }
+
+  /**
+   * Pause recording (for SDK disable)
+   * Stops capturing but maintains state to resume later
+   */
+  public pause(): void {
+    this.stopRecording();
+  }
+
+  /**
+   * Resume recording (for SDK enable)
+   * Restarts recording from where it left off using the same config
+   */
+  public resume(): void {
+    if (this.initialized && this.config && !this.recording) {
+      this.startRecording();
+    }
   }
 
   /**
@@ -301,7 +319,7 @@ export function transformRrwebEvent(
   clientId: string,
   userId: string | null | undefined,
   url: string,
-  referrer?: string
+  referrer?: string,
 ): {
   type: "rrweb";
   timestamp: number;

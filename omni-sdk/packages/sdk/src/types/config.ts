@@ -138,6 +138,11 @@ export interface SDKConfig {
   userId?: string | null;
 
   /**
+   * Optional: Enable/disable SDK tracking (default: true)
+   */
+  enabled?: boolean;
+
+  /**
    * Optional: Batch size before auto-flush (default: 50)
    */
   batchSize?: number;
