@@ -33,7 +33,7 @@ export class Tracker {
   constructor(
     config: Config,
     sessionManager: SessionManager,
-    eventQueue: EventQueue
+    eventQueue: EventQueue,
   ) {
     this.config = config;
     this.sessionManager = sessionManager;
@@ -48,6 +48,10 @@ export class Tracker {
     route?: string;
     isInitialLoad?: boolean;
   }): void {
+    if (!this.config.isEnabled()) {
+      return;
+    }
+
     const pageContext = getPageContext();
     const { pageDimensions, viewport } = getPageDimensions();
 
@@ -77,8 +81,12 @@ export class Tracker {
    */
   trackClick(
     element: Element,
-    coordinates?: { pageX?: number; pageY?: number }
+    coordinates?: { pageX?: number; pageY?: number },
   ): void {
+    if (!this.config.isEnabled()) {
+      return;
+    }
+
     const pageContext = getPageContext();
     const { pageDimensions, viewport } = getPageDimensions();
 
@@ -91,10 +99,8 @@ export class Tracker {
     // Compute heatmap fields: normalized coordinates
     const pageX = coordinates?.pageX ?? 0;
     const pageY = coordinates?.pageY ?? 0;
-    const xNorm =
-      pageDimensions.w > 0 ? (pageX + window.scrollX) / pageDimensions.w : 0;
-    const yNorm =
-      pageDimensions.h > 0 ? (pageY + window.scrollY) / pageDimensions.h : 0;
+    const xNorm = pageDimensions.w > 0 ? pageX / pageDimensions.w : 0;
+    const yNorm = pageDimensions.h > 0 ? pageY / pageDimensions.h : 0;
 
     // Get screen classification for responsive heatmap grouping
     const screenClass: ScreenClass = getScreenClass(window.innerWidth);
@@ -120,8 +126,6 @@ export class Tracker {
       selector,
       xpath,
       tagName,
-      elementTextHash: elementText ? this.hashText(elementText) : undefined,
-      // Heatmap fields
       xNorm,
       yNorm,
       screenClass,
@@ -135,6 +139,10 @@ export class Tracker {
    * Track a custom event
    */
   trackCustom(eventName: string, properties?: Record<string, any>): void {
+    if (!this.config.isEnabled()) {
+      return;
+    }
+
     const pageContext = getPageContext();
     const { pageDimensions, viewport } = getPageDimensions();
 
@@ -162,7 +170,7 @@ export class Tracker {
    */
   track(event: BaseEvent | Event): void {
     if (this.config.isDebugEnabled()) {
-      console.log("[Tracker] Tracking event:", event);
+      // console.log("[Tracker] Tracking event:", event);
     }
 
     this.eventQueue.add(event as Event);
@@ -225,15 +233,16 @@ export class Tracker {
    * Hash text using SHA256 (simple fallback to base64 hash)
    * In production, consider using a proper crypto library
    */
-  //TODO: use crypto hash
-  private hashText(text: string): string {
-    // Simple hash using btoa (not cryptographic, just for demo)
-    // In production, use crypto.subtle.digest or a library like tweetnacl
-    try {
-      return btoa(text).substring(0, 64);
-    } catch {
-      return "hash-failed";
-    }
+  private async hashText(text: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(text);
+
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+
+    // Convert ArrayBuffer → hex string
+    return Array.from(new Uint8Array(hashBuffer))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
   }
 
   /**
@@ -280,7 +289,7 @@ export class Tracker {
    */
   trackRrweb(rrwebEvent: RrwebEvent): void {
     if (this.config.isDebugEnabled()) {
-      console.log("[Tracker] Tracking rrweb event:", rrwebEvent);
+      // console.log("[Tracker] Tracking rrweb event:", rrwebEvent);
     }
 
     const event: Event = {

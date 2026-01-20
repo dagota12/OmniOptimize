@@ -128,6 +128,12 @@ export interface SDKConfig {
   endpoint: string;
 
   /**
+   * Public write key for authentication
+   * Required for transmitting events to the server
+   */
+  writeKey: string;
+
+  /**
    * Optional: Client ID (defaults to anonymous ID)
    */
   clientId?: string;
@@ -136,6 +142,11 @@ export interface SDKConfig {
    * Optional: User ID (can be set after auth)
    */
   userId?: string | null;
+
+  /**
+   * Optional: Enable/disable SDK tracking (default: true)
+   */
+  enabled?: boolean;
 
   /**
    * Optional: Batch size before auto-flush (default: 50)

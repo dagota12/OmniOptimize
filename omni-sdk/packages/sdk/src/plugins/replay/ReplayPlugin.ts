@@ -143,7 +143,7 @@ export class ReplayPlugin implements IPlugin {
     try {
       // Get tracker methods safely
       const getSessionId = (this.tracker as any).getSessionId?.bind(
-        this.tracker
+        this.tracker,
       );
       const getConfig = (this.tracker as any).getConfig?.bind(this.tracker);
       const trackRrweb = (this.tracker as any).trackRrweb?.bind(this.tracker);
@@ -161,7 +161,7 @@ export class ReplayPlugin implements IPlugin {
         clientId,
         userId,
         window.location.href,
-        document.referrer
+        document.referrer,
       );
 
       // Track the event
@@ -226,7 +226,7 @@ export class ReplayPlugin implements IPlugin {
     } catch (error) {
       console.error(
         "[ReplayPlugin] Error setting up activity tracking:",
-        error
+        error,
       );
     }
   }
@@ -247,7 +247,7 @@ export class ReplayPlugin implements IPlugin {
     } catch (error) {
       console.error(
         "[ReplayPlugin] Error cleaning up activity tracking:",
-        error
+        error,
       );
     }
   }
@@ -260,7 +260,7 @@ export class ReplayPlugin implements IPlugin {
     if (!this.enabled || !this.rrwebManager) return;
 
     console.log(
-      "[ReplayPlugin] Session expired, restarting recording with new sessionId"
+      "[ReplayPlugin] Session expired, restarting recording with new sessionId",
     );
 
     try {
@@ -274,6 +274,34 @@ export class ReplayPlugin implements IPlugin {
       });
     } catch (error) {
       console.error("[ReplayPlugin] Error handling session expiration:", error);
+    }
+  }
+
+  /**
+   * Pause recording and activity tracking (for SDK disable)
+   */
+  public async pause(): Promise<void> {
+    if (!this.enabled || !this.rrwebManager) return;
+
+    try {
+      this.stopRecording();
+      this.cleanupActivityTracking();
+    } catch (error) {
+      console.error("[ReplayPlugin] Error pausing:", error);
+    }
+  }
+
+  /**
+   * Resume recording and activity tracking (for SDK enable)
+   */
+  public async resume(): Promise<void> {
+    if (!this.enabled || !this.rrwebManager) return;
+
+    try {
+      this.startRecording();
+      this.setupActivityTracking();
+    } catch (error) {
+      console.error("[ReplayPlugin] Error resuming:", error);
     }
   }
 

@@ -14,6 +14,8 @@
  *   rrwebManager.startRecording();
  */
 
+import { CAPTURE_CONSTANTS } from "../constants/CaptureConstants";
+
 type RrwebEventCallback = (event: any) => void;
 
 /**
@@ -85,13 +87,13 @@ export class RrwebManager {
   constructor(rrwebInstance: RrwebLibrary) {
     if (!rrwebInstance) {
       throw new Error(
-        "[RrwebManager] rrweb is REQUIRED. Install: npm install @omni-analytics/sdk"
+        "[RrwebManager] rrweb is REQUIRED. Install: npm install @omni-analytics/sdk",
       );
     }
 
     if (!rrwebInstance.record || typeof rrwebInstance.record !== "function") {
       throw new Error(
-        "[RrwebManager] Invalid rrweb instance. Ensure rrweb is properly imported."
+        "[RrwebManager] Invalid instance. Ensure rrweb is properly imported.",
       );
     }
 
@@ -189,6 +191,24 @@ export class RrwebManager {
   }
 
   /**
+   * Pause recording (for SDK disable)
+   * Stops capturing but maintains state to resume later
+   */
+  public pause(): void {
+    this.stopRecording();
+  }
+
+  /**
+   * Resume recording (for SDK enable)
+   * Restarts recording from where it left off using the same config
+   */
+  public resume(): void {
+    if (this.initialized && this.config && !this.recording) {
+      this.startRecording();
+    }
+  }
+
+  /**
    * Destroy the manager and cleanup
    */
   public destroy(): void {
@@ -208,28 +228,35 @@ export class RrwebManager {
     const maskInputOptions: Record<string, boolean> = {
       password: true,
       hidden: true,
-      checkbox: false,
-      radio: false,
-      color: false,
-      date: false,
-      "datetime-local": false,
-      email: false,
-      month: false,
-      number: false,
-      range: false,
-      tel: false,
-      text: false,
-      textarea: false,
-      time: false,
-      url: false,
-      week: false,
+      checkbox: true,
+      radio: true,
+      color: true,
+      date: true,
+      "datetime-local": true,
+      email: true,
+      month: true,
+      number: true,
+      range: true,
+      tel: true,
+      text: true,
+      textarea: true,
+      time: true,
+      url: true,
+      week: true,
       ...config.maskInputOptions,
     };
 
     const options: Record<string, any> = {
       maskInputOptions,
+      maskAllInputs: true,
       recordCanvas: false, // Disable canvas recording for performance
       recordCrossOriginIframes: false,
+
+      // Use global capture constants for blocking, ignoring, and masking
+      blockClass: CAPTURE_CONSTANTS.NO_CAPTURE_CLASS,
+      ignoreClass: CAPTURE_CONSTANTS.IGNORE_CLASS,
+      maskTextClass: CAPTURE_CONSTANTS.MASK_CLASS,
+
       sampling: {
         // Adaptive sampling for performance
         mousemove: true,
@@ -239,9 +266,15 @@ export class RrwebManager {
       },
     };
 
-    // Add block selectors
+    // Add block selectors - always include no-capture class
+    const defaultBlockSelectors = [`.${CAPTURE_CONSTANTS.NO_CAPTURE_CLASS}`];
     if (config.blockSelectors && config.blockSelectors.length > 0) {
-      options.blockSelectors = config.blockSelectors;
+      options.blockSelectors = [
+        ...defaultBlockSelectors,
+        ...config.blockSelectors,
+      ];
+    } else {
+      options.blockSelectors = defaultBlockSelectors;
     }
 
     // Add mask selectors
@@ -301,7 +334,7 @@ export function transformRrwebEvent(
   clientId: string,
   userId: string | null | undefined,
   url: string,
-  referrer?: string
+  referrer?: string,
 ): {
   type: "rrweb";
   timestamp: number;

@@ -10,9 +10,11 @@ import { ITransmitter } from "./ITransmitter";
 
 export class BeaconTransmitter implements ITransmitter {
   private readonly endpoint: string;
+  private readonly writeKey: string;
 
-  constructor(endpoint: string) {
+  constructor(endpoint: string, writeKey: string) {
     this.endpoint = endpoint;
+    this.writeKey = writeKey;
   }
 
   isAvailable(): boolean {
@@ -32,7 +34,9 @@ export class BeaconTransmitter implements ITransmitter {
     }
 
     try {
-      const sent = navigator.sendBeacon(this.endpoint, JSON.stringify(batch));
+      // Append writeKey as query parameter
+      const url = `${this.endpoint}?writeKey=${encodeURIComponent(this.writeKey)}`;
+      const sent = navigator.sendBeacon(url, JSON.stringify(batch));
 
       if (!sent) {
         throw new Error("sendBeacon returned false - queue may be full");

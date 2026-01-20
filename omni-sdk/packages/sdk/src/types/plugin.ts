@@ -45,6 +45,18 @@ export interface IPlugin {
    * Called when the plugin is being destroyed (e.g., page unload)
    */
   destroy?(): Promise<void>;
+
+  /**
+   * Called when the SDK is disabled
+   * Remove all listeners and pause event capture
+   */
+  pause?(): Promise<void>;
+
+  /**
+   * Called when the SDK is re-enabled
+   * Re-register listeners and resume event capture
+   */
+  resume?(): Promise<void>;
 }
 
 /**

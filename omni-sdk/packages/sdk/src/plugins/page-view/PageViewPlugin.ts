@@ -11,6 +11,10 @@ export class PageViewPlugin implements IPlugin {
   version = "1.0.0";
   private context: PluginContext | null = null;
   private isInitialLoad = true;
+  private originalPushState: any = null;
+  private originalReplaceState: any = null;
+  private popstateListener: EventListener | null = null;
+  private visibilitychangeListener: EventListener | null = null;
 
   async init(context: PluginContext): Promise<void> {
     this.context = context;
@@ -43,13 +47,13 @@ export class PageViewPlugin implements IPlugin {
    * to track SPA navigation
    */
   private setupHistoryInterception(): void {
-    const originalPushState = history.pushState;
-    const originalReplaceState = history.replaceState;
+    this.originalPushState = history.pushState;
+    this.originalReplaceState = history.replaceState;
     const self = this;
 
     // Override pushState
     history.pushState = function (...args) {
-      const result = originalPushState.apply(this, args);
+      const result = self.originalPushState.apply(this, args);
 
       // Use setTimeout to allow DOM to update
       setTimeout(() => {
@@ -61,7 +65,7 @@ export class PageViewPlugin implements IPlugin {
 
     // Override replaceState
     history.replaceState = function (...args) {
-      const result = originalReplaceState.apply(this, args);
+      const result = self.originalReplaceState.apply(this, args);
 
       // Use setTimeout to allow DOM to update
       setTimeout(() => {
@@ -72,11 +76,12 @@ export class PageViewPlugin implements IPlugin {
     };
 
     // Track back/forward navigation
-    window.addEventListener("popstate", () => {
+    this.popstateListener = () => {
       setTimeout(() => {
         self.trackPageView(false);
       }, 0);
-    });
+    };
+    window.addEventListener("popstate", this.popstateListener);
   }
 
   /**
@@ -86,7 +91,7 @@ export class PageViewPlugin implements IPlugin {
   private setupVisibilityTracking(): void {
     let lastVisibleTime = Date.now();
 
-    document.addEventListener("visibilitychange", () => {
+    this.visibilitychangeListener = () => {
       if (!document.hidden) {
         const timeSinceLastVisible = Date.now() - lastVisibleTime;
 
@@ -97,11 +102,63 @@ export class PageViewPlugin implements IPlugin {
       } else {
         lastVisibleTime = Date.now();
       }
-    });
+    };
+    document.addEventListener(
+      "visibilitychange",
+      this.visibilitychangeListener,
+    );
+  }
+
+  /**
+   * Remove all listeners (pause tracking)
+   */
+  private removeListeners(): void {
+    // Restore original history methods
+    if (this.originalPushState) {
+      history.pushState = this.originalPushState;
+    }
+    if (this.originalReplaceState) {
+      history.replaceState = this.originalReplaceState;
+    }
+
+    // Remove event listeners
+    if (this.popstateListener) {
+      window.removeEventListener("popstate", this.popstateListener);
+    }
+    if (this.visibilitychangeListener) {
+      document.removeEventListener(
+        "visibilitychange",
+        this.visibilitychangeListener,
+      );
+    }
+  }
+
+  /**
+   * Re-register all listeners (resume tracking)
+   */
+  private reregisterListeners(): void {
+    // Re-intercept history methods
+    this.setupHistoryInterception();
+    // Re-setup visibility tracking
+    this.setupVisibilityTracking();
+  }
+
+  /**
+   * Pause page view tracking
+   */
+  public async pause(): Promise<void> {
+    this.removeListeners();
+  }
+
+  /**
+   * Resume page view tracking
+   */
+  public async resume(): Promise<void> {
+    this.reregisterListeners();
   }
 
   async destroy(): Promise<void> {
-    // Cleanup if needed
+    this.removeListeners();
     this.context = null;
   }
 }

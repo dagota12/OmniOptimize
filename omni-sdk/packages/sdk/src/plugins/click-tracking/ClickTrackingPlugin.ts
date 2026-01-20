@@ -5,6 +5,7 @@
  */
 
 import type { IPlugin, PluginContext } from "../../types";
+import { CAPTURE_CONSTANTS } from "../../constants/CaptureConstants";
 
 /**
  * Options for click tracking plugin
@@ -48,24 +49,46 @@ export class ClickTrackingPlugin implements IPlugin {
   private context: PluginContext | null = null;
   private lastClickTime = 0;
   private options: ClickTrackingOptions;
+  private clickListener: EventListener | null = null;
 
   constructor(options: ClickTrackingOptions = {}) {
     this.options = {
       throttleMs: 100,
       maxTextLength: 100,
       debug: false,
+      // Add default no-capture class to exclude selectors
+      excludeSelectors: [
+        `.${CAPTURE_CONSTANTS.NO_CAPTURE_CLASS}`,
+        ...(options.excludeSelectors || []),
+      ],
       ...options,
     };
   }
 
   async init(context: PluginContext): Promise<void> {
     this.context = context;
-
-    // Setup click tracking
-    document.addEventListener("click", (e) => this.handleClick(e), true); // Use capture phase
+    this.setupClickTracking();
 
     if (this.options.debug) {
       console.log("[ClickTrackingPlugin] Initialized");
+    }
+  }
+
+  /**
+   * Setup click tracking listener
+   */
+  private setupClickTracking(): void {
+    this.clickListener = (e) => this.handleClick(e as MouseEvent);
+    document.addEventListener("click", this.clickListener, true);
+  }
+
+  /**
+   * Remove click tracking listener
+   */
+  private removeClickTracking(): void {
+    if (this.clickListener) {
+      document.removeEventListener("click", this.clickListener, true);
+      this.clickListener = null;
     }
   }
 
@@ -142,7 +165,22 @@ export class ClickTrackingPlugin implements IPlugin {
     return true;
   }
 
+  /**
+   * Pause click tracking
+   */
+  public async pause(): Promise<void> {
+    this.removeClickTracking();
+  }
+
+  /**
+   * Resume click tracking
+   */
+  public async resume(): Promise<void> {
+    this.setupClickTracking();
+  }
+
   async destroy(): Promise<void> {
+    this.removeClickTracking();
     this.context = null;
   }
 }

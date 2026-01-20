@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { initializeSDK, destroySDK } from "@omni-analytics/sdk";
+import { initializeSDK, disableSDK, enableSDK, destroySDK } from "@omni-analytics/sdk";
 import { TrackerProvider } from "@omni-analytics/react";
 import App from "./App";
 import "./index.css";
@@ -10,15 +10,16 @@ import "./index.css";
 const { tracker } = initializeSDK({
   projectId: "local-example-app",
   endpoint: "http://localhost:5000/ingest",
+  enabled: true,
   debug: true,
+  writeKey: "pk_omniwritekey",
   batchSize: 3,
   batchTimeout: 2000,
   replay: {
     enabled: true,
-    debug: true,
+    debug: false,
   },
 });
-
 console.log("✅ SDK Initialized:", { tracker });
 
 ReactDOM.createRoot(document.getElementById("root")).render(

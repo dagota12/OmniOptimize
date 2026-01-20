@@ -1,5 +1,6 @@
 import type { SDKConfig } from "../types/config";
 import { generateUUID } from "../utils";
+import { Logger, type ILogger } from "../utils/Logger";
 
 /**
  * Config Manager
@@ -9,6 +10,7 @@ import { generateUUID } from "../utils";
 export class Config {
   private readonly projectId: string;
   private readonly endpoint: string;
+  private readonly writeKey: string;
   private readonly batchSize: number;
   private readonly batchTimeout: number;
   private readonly debug: boolean;
@@ -22,6 +24,8 @@ export class Config {
   private replayConfig: any;
   private sessionConfig: any;
   private inactivityTimeoutMs: number;
+  private enabled: boolean;
+  private logger: ILogger;
 
   constructor(config: SDKConfig) {
     // Validate required fields
@@ -31,9 +35,24 @@ export class Config {
     if (!config.endpoint) {
       throw new Error("endpoint is required");
     }
+    if (!config.writeKey) {
+      throw new Error("writeKey is required");
+    }
+    if (
+      config.batchSize !== undefined &&
+      (config.batchSize <= 0 || config.batchSize > 100)
+    ) {
+      throw new Error(
+        "batchSize must be greater than 0 and less than or equal to 100",
+      );
+    }
+    if (config.batchTimeout !== undefined && config.batchTimeout <= 1000) {
+      throw new Error("batchTimeout must be greater than 1000ms");
+    }
 
     this.projectId = config.projectId;
     this.endpoint = config.endpoint;
+    this.writeKey = config.writeKey;
     this.batchSize = config.batchSize ?? 50;
     this.batchTimeout = config.batchTimeout ?? 10000;
     this.debug = config.debug ?? false;
@@ -41,6 +60,7 @@ export class Config {
     this.clientIdStorageKey = "omni_client_id"; // Browser-wide persistence key
     this.replayIdStorageKey = "omni_replay_id"; // Tab-scoped (sessionStorage)
     this.captureErrors = config.captureErrors ?? false;
+    this.enabled = config.enabled ?? true;
     this.clientId = config.clientId ?? this.loadOrCreateClientId();
     this.userId = config.userId ?? null;
     this.replayId = this.loadOrCreateReplayId();
@@ -48,14 +68,16 @@ export class Config {
     this.sessionConfig = config.session ?? {};
     this.inactivityTimeoutMs = config.session?.inactivityTimeoutMs ?? 1800000;
 
-    if (this.debug) {
-      console.log("[OmniSDK] Config initialized:", {
-        projectId: this.projectId,
-        endpoint: this.endpoint,
-        batchSize: this.batchSize,
-        batchTimeout: this.batchTimeout,
-      });
-    }
+    // Initialize logger
+    this.logger = new Logger(this.debug, "[OmniSDK]");
+
+    this.logger.debug("Config initialized:", {
+      projectId: this.projectId,
+      endpoint: this.endpoint,
+      batchSize: this.batchSize,
+      batchTimeout: this.batchTimeout,
+      enabled: this.enabled,
+    });
   }
 
   /**
@@ -145,6 +167,10 @@ export class Config {
     return this.endpoint;
   }
 
+  getWriteKey(): string {
+    return this.writeKey;
+  }
+
   getBatchSize(): number {
     return this.batchSize;
   }
@@ -209,5 +235,26 @@ export class Config {
    */
   getInactivityTimeoutMs(): number {
     return this.inactivityTimeoutMs;
+  }
+
+  /**
+   * Check if SDK is enabled
+   */
+  isEnabled(): boolean {
+    return this.enabled;
+  }
+
+  /**
+   * Set SDK enabled state
+   */
+  setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
+  }
+
+  /**
+   * Get logger instance
+   */
+  getLogger(): ILogger {
+    return this.logger;
   }
 }

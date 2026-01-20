@@ -51,7 +51,7 @@ export class PluginRegistry {
           error instanceof Error ? error : new Error(String(error));
         console.error(
           `[PluginRegistry] Failed to initialize plugin "${name}":`,
-          metadata.error
+          metadata.error,
         );
       }
     }
@@ -89,6 +89,50 @@ export class PluginRegistry {
   }
 
   /**
+   * Pause all plugins (removes listeners and stops event capture)
+   */
+  async pauseAll(): Promise<void> {
+    const pausePromises: Promise<void>[] = [];
+
+    for (const metadata of this.plugins.values()) {
+      if (metadata.plugin.pause) {
+        try {
+          pausePromises.push(metadata.plugin.pause());
+        } catch (error) {
+          console.error(
+            `[PluginRegistry] Error pausing plugin "${metadata.plugin.name}":`,
+            error,
+          );
+        }
+      }
+    }
+
+    await Promise.all(pausePromises);
+  }
+
+  /**
+   * Resume all plugins (re-register listeners and resume event capture)
+   */
+  async resumeAll(): Promise<void> {
+    const resumePromises: Promise<void>[] = [];
+
+    for (const metadata of this.plugins.values()) {
+      if (metadata.plugin.resume) {
+        try {
+          resumePromises.push(metadata.plugin.resume());
+        } catch (error) {
+          console.error(
+            `[PluginRegistry] Error resuming plugin "${metadata.plugin.name}":`,
+            error,
+          );
+        }
+      }
+    }
+
+    await Promise.all(resumePromises);
+  }
+
+  /**
    * Destroy all plugins
    */
   async destroy(): Promise<void> {
@@ -101,7 +145,7 @@ export class PluginRegistry {
         } catch (error) {
           console.error(
             `[PluginRegistry] Error destroying plugin "${metadata.plugin.name}":`,
-            error
+            error,
           );
         }
       }
@@ -119,7 +163,7 @@ export class PluginRegistry {
     return {
       total: this.plugins.size,
       initializedCount: Array.from(this.plugins.values()).filter(
-        (m) => m.initialized
+        (m) => m.initialized,
       ).length,
       failedCount: Array.from(this.plugins.values()).filter((m) => m.error)
         .length,

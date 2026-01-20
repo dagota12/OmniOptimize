@@ -35,8 +35,8 @@ export interface ClickEvent extends BaseEvent {
   type: "click";
   pageX: number;
   pageY: number;
-  xNorm?: number; // Normalized X: (pageX + scrollX) / pageWidth (0-1)
-  yNorm?: number; // Normalized Y: (pageY + scrollY) / pageHeight (0-1)
+  xNorm?: number; // Normalized X: (pageX) / pageWidth (0-1)
+  yNorm?: number; // Normalized Y: (pageY) / pageHeight (0-1)
   screenClass?: ScreenClass; // Device class: 'mobile' | 'tablet' | 'desktop'
   selector: string;
   xpath?: string;
