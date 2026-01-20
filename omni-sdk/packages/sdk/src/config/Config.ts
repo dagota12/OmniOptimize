@@ -10,6 +10,7 @@ import { Logger, type ILogger } from "../utils/Logger";
 export class Config {
   private readonly projectId: string;
   private readonly endpoint: string;
+  private readonly writeKey: string;
   private readonly batchSize: number;
   private readonly batchTimeout: number;
   private readonly debug: boolean;
@@ -34,9 +35,24 @@ export class Config {
     if (!config.endpoint) {
       throw new Error("endpoint is required");
     }
+    if (!config.writeKey) {
+      throw new Error("writeKey is required");
+    }
+    if (
+      config.batchSize !== undefined &&
+      (config.batchSize <= 0 || config.batchSize > 100)
+    ) {
+      throw new Error(
+        "batchSize must be greater than 0 and less than or equal to 100",
+      );
+    }
+    if (config.batchTimeout !== undefined && config.batchTimeout <= 1000) {
+      throw new Error("batchTimeout must be greater than 1000ms");
+    }
 
     this.projectId = config.projectId;
     this.endpoint = config.endpoint;
+    this.writeKey = config.writeKey;
     this.batchSize = config.batchSize ?? 50;
     this.batchTimeout = config.batchTimeout ?? 10000;
     this.debug = config.debug ?? false;
@@ -149,6 +165,10 @@ export class Config {
 
   getEndpoint(): string {
     return this.endpoint;
+  }
+
+  getWriteKey(): string {
+    return this.writeKey;
   }
 
   getBatchSize(): number {

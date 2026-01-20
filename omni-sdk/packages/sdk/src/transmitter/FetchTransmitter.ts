@@ -9,11 +9,18 @@ import { ITransmitter } from "./ITransmitter";
 
 export class FetchTransmitter implements ITransmitter {
   private readonly endpoint: string;
+  private readonly writeKey: string;
   private readonly timeout: number;
   private readonly retries: number;
 
-  constructor(endpoint: string, timeout: number = 30000, retries: number = 3) {
+  constructor(
+    endpoint: string,
+    writeKey: string,
+    timeout: number = 10000,
+    retries: number = 3,
+  ) {
     this.endpoint = endpoint;
+    this.writeKey = writeKey;
     this.timeout = timeout;
     this.retries = retries;
   }
@@ -38,7 +45,10 @@ export class FetchTransmitter implements ITransmitter {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
-        const response = await fetch(this.endpoint, {
+        // Append writeKey as query parameter
+        const url = `${this.endpoint}?writeKey=${encodeURIComponent(this.writeKey)}`;
+
+        const response = await fetch(url, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -54,7 +64,7 @@ export class FetchTransmitter implements ITransmitter {
         }
 
         lastError = new Error(
-          `HTTP ${response.status}: ${response.statusText}`
+          `HTTP ${response.status}: ${response.statusText}`,
         );
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));

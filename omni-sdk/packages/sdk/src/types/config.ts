@@ -128,6 +128,12 @@ export interface SDKConfig {
   endpoint: string;
 
   /**
+   * Public write key for authentication
+   * Required for transmitting events to the server
+   */
+  writeKey: string;
+
+  /**
    * Optional: Client ID (defaults to anonymous ID)
    */
   clientId?: string;

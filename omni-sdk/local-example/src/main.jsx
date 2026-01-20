@@ -10,12 +10,14 @@ import "./index.css";
 const { tracker } = initializeSDK({
   projectId: "local-example-app",
   endpoint: "http://localhost:5000/ingest",
+  enabled: true,
   debug: true,
+  writeKey: "pk_omniwritekey",
   batchSize: 3,
   batchTimeout: 2000,
   replay: {
     enabled: true,
-    debug: true,
+    debug: false,
   },
 });
 console.log("✅ SDK Initialized:", { tracker });

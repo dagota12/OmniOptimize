@@ -126,8 +126,6 @@ export class Tracker {
       selector,
       xpath,
       tagName,
-      elementTextHash: elementText ? this.hashText(elementText) : undefined,
-      // Heatmap fields
       xNorm,
       yNorm,
       screenClass,
@@ -235,15 +233,16 @@ export class Tracker {
    * Hash text using SHA256 (simple fallback to base64 hash)
    * In production, consider using a proper crypto library
    */
-  //TODO: use crypto hash
-  private hashText(text: string): string {
-    // Simple hash using btoa (not cryptographic, just for demo)
-    // In production, use crypto.subtle.digest or a library like tweetnacl
-    try {
-      return btoa(text).substring(0, 64);
-    } catch {
-      return "hash-failed";
-    }
+  private async hashText(text: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(text);
+
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+
+    // Convert ArrayBuffer → hex string
+    return Array.from(new Uint8Array(hashBuffer))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
   }
 
   /**

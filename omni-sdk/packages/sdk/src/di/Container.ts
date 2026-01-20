@@ -87,8 +87,14 @@ export class Container {
       this.transmitters = options.transmitters;
     } else {
       this.transmitters = [
-        new FetchTransmitter(this.config.getEndpoint()),
-        new BeaconTransmitter(this.config.getEndpoint()),
+        new FetchTransmitter(
+          this.config.getEndpoint(),
+          this.config.getWriteKey(),
+        ),
+        new BeaconTransmitter(
+          this.config.getEndpoint(),
+          this.config.getWriteKey(),
+        ),
       ];
     }
 
