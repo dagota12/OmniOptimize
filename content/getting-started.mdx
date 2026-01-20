@@ -23,8 +23,12 @@ initializeSDK({
   projectId: "your-project-id",
   endpoint: "https://omnioptimize-vdvv.onrender.com/ingest",
   writeKey: "omni-public-write-key-here", // Required — get from dashboard
+  replay: {
+    enabled: true, //enables session replay
+  },
 });
 ```
+- session replays are not by default so enable if if needed.
 
 That's it. The SDK will now track page views, clicks, and sessions automatically.
 
